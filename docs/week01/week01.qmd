@@ -35,9 +35,14 @@ We will access data from <https://www.e-stat.go.jp/> using their application pro
   
 ### RStudio
 
-We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages: 
-  - `sf`: simple features a package with many utilities for working with vector data
-  - 
+We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages on the computer you will be using: 
+
+- `sf`: simple features a package with many utilities for working with spatial vector data
+- `raster`: a package for working with raster data
+- `mapview`: a package for creating interactive maps of vector and raster data
+- `ggplot`: a package for plotting data (included in tidyverse)
+
+*Note that you do not need to install packages if they are already installed - you only need to install packages once.*
 
 
 
