@@ -1,9 +1,15 @@
-# R Workshops
+---
+title: "NCU: R Workshops"
+---
 
--   [Workshop 01](docs/workshop_01/week01.html)
+# NCU: R Workshops
 
--   [Workshop 02](docs/workshop_02/index.html)
+The following links go to specific webpages for each of the four workshops
 
--   [Workshop 03](docs/workshop_03/index.html)
+-   [Workshop 01](workshop_01/week01.html)
 
--   [Workshop 04](docs/workshop_04/index.html)
+-   [Workshop 02](workshop_02/index.html)
+
+-   [Workshop 03](workshop_03/index.html)
+
+-   [Workshop 04](workshop_04/index.html)
