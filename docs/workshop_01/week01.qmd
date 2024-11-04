@@ -1,0 +1,148 @@
+---
+title: "Workshop 01: Introduction to Geospatial Data"
+author: "Jude Bayham"
+format: 
+  html:
+    theme: zephyr
+    toc: true
+---
+
+<!-- flashy geospatial image -->
+
+## Introduction
+
+The objective of this workshop is to introduce you to geospatial data. You will acquire, assemble, process, and map spatial data.
+
+## Prerequisites
+
+### Reading
+
+There are many sources and references available online to help you learn to work with spatial data in R. Taro Mieno is an economist at University of Nebraska-Lincoln and he has written an online book, [R as GIS for Economists](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/), to help economists learn to use R for GIS: . Please read [Chapter 2 Vector Data Handling with sf](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/chapters/02-VectorDataBasics.html) in preparation for the workshop. The reading covers some of the basics of vector type spatial data that we will learn. Being familiar with these concepts will allow you to understand the workshop better and ask more in-depth questions during the workshop.
+
+You may also find [Geocomputation with R](https://r.geocompx.org/) by Lovelace et al. a helpful resource. It is written for a broader audience, but provides more detail than *R as GIS for Economists*.
+ 
+
+### Statistics Japan
+
+We will access data from <https://www.e-stat.go.jp/> using their application programming interface (API). You will need to register for an API key in order to use the API. These were the instructions and link names in English. I will update these with instructions in Japanese.
+
+  1. Follow the links to create an account.   
+  
+  2. Click the link to "My Page".
+  
+  3. Click the link to "API function (application ID issuance)"
+  
+  4. Complete the fields name (a name for your application: Rscript) and URL (http://test.localhost/)
+  
+  5. Click "issue" to the right
+  
+  6. The appID field should now contain a long string of numbers and letters. This is the key associated with your account. You will use this to query data through the API.
+  
+  7. Set appID as an environmental variable by typing the following code in R: `usethis::edit_r_environ()`. This command uses the function `edit_r_environ()` from the package called `usethis`. If you have not installed the package, first type `install.packages("usethis")` to install the package. Then, add a line `STATISTICS_JAPAN_API_KEY = "your_key_here"`. And save the file. Restart the R kernel.
+  
+### RStudio
+
+We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages on the computer you will be using: 
+
+- `sf`: simple features a package with many utilities for working with spatial vector data
+- `raster`: a package for working with raster data
+- `mapview`: a package for creating interactive maps of vector and raster data
+- `ggplot`: a package for plotting data (included in tidyverse)
+
+*Note that you do not need to install packages if they are already installed - you only need to install packages once.*
+
+
+
+## Geospatial Data Overview
+- **Definition**: Geospatial data is data that includes location information, meaning it includes data linked to locations on the Earth's surface. Geospatial data is usually represented as coordinates (latitude, longitude) or as addresses, regions, or other geographic identifiers.
+
+- **Types of Geospatial Data**:
+  - **Vector data**: Represents geographic features using points, lines, and polygons (e.g., locations of stores, roads, or regions).
+  - **Raster data**: Represents data in a grid format, typically used for continuous variables (e.g., elevation, temperature, satellite imagery).
+- **Coordinate Reference Systems (CRS)**: Defines how spatial data is mapped onto the Earth's surface. It's crucial to understand CRS when working with multiple datasets to ensure they align correctly (e.g., WGS 84, UTM).
+- **Projections**: Geospatial data must be projected to represent the 3D Earth on a 2D surface. Different projections minimize different types of distortions (e.g., area, shape, distance).
+- **Geospatial Packages in R**:
+  - **sf**: Simple Features for R, a package for working with vector data.
+  - **raster**: A package for working with raster data.
+  - **sp**: An older package that also handles spatial data but is being gradually replaced by `sf`.
+- **Common Tasks**:
+  - Loading and visualizing geospatial data.
+  - Transforming data to different CRS.
+  - Performing spatial operations like intersections, unions, and buffers.
+  - Creating maps and conducting spatial analysis (e.g., proximity analysis, clustering).
+- **File Formats**:
+  - **Shapefiles**: A common vector data format that consists of multiple files.
+  - **GeoTIFF**: A common raster data format.
+  - **GeoJSON**: A lightweight format for sharing geospatial data online.
+
+## Getting started
+
+Let's get some data and read it into R. The Geospatial Information Authority of Japan seems provides downloadable maps of the country:
+<https://www.gsi.go.jp/kankyochiri/gm_japan_e.html>. Download the Global Map Japan version 2.2 Vector data (Released in 2016) by clicking on the linked file: `gm-jpn-all_u_2_2.zip` (9.2MB). This is a zipped file containing many files. **Note where you download the file**. 
+
+Before opening Rstudio and working with the data, you should organize your digital workspace. 
+
+1. Create a directory for this workshop titled: `workshop_01`. If you already have a directory for this class/seminar, create the directory under the class directory. 
+
+2. Create a directory titled `inputs` under `workshop_01`. The path should be `workshop_01/inputs`.
+
+3. Copy or move the directory created by unzipping `gm-jpn-all_u_2_2.zip` into `workshop_01/inputs`.
+
+
+Open up Rstudio and do the following: 
+
+1. Open a new script.  
+
+2. Write a comment with a brief description about what the script does. In most cases, you know the intention of the script. Since this is a workshop, type `#This is an introduction to working with spatial data in R`
+
+3. Load the package `pacman` and use `p_load()` to install and load the packages we will be using in this workshop.
+
+4. Navigate to `workshop_01` (the directory you just created for the project). You can use the dropdown menu Session > Set Working Directory > Choose Directory or type the `setwd("path_here")` command at the top of your script. If you use the dropdown menu, R will generate the `setwd()` command and display it in the console. Copy and paste it into your script.
+
+5. Save your script and title the file: `workshop_01.R`
+
+The first several lines of your script should look something like this:
+
+```{r}
+#| eval: false
+#This is an introduction to working with spatial data in R
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,mapview)
+
+setwd("your_path/workshop_01")
+
+######################
+```
+
+### Reading spatial data
+
+Now we are ready to read in our spatial data. We will start with vector spatial data (see <https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/chapters/02-VectorDataBasics.html> for details on vector data). Read in the data using the following command:
+
+```{r}
+#| echo: false
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,mapview)
+
+```
+
+```{r}
+#Read in Japan political boundaries
+jp_boundaries <- st_read("inputs/gm-jpn-all_u_2_2/polbnda_jpn.shp")
+
+```
+
+Note that the directory `gm-jpn-all_u_2_2` was created by default when unzipping the downloaded file. If successful, R prints out information in the console. First, the data format is ESRI Shapefile, which is one of many formats for storing spatial data. The `sf` package read the data in and created a simple feature collection with 2914 rows (features) and 9 columns (fields, variables or attributes). The features are polygons, which are enclosed multi-sided shapes defined by a series of points with lines connecting them. We can ignore the dimensions and bounding box for now. The Geodetic CRS is ITRF94 (<https://epsg.io/4916>), which defines the coordinate reference system. This is information that tells `sf` how to interpret the location information (coordinates). 
+
+Let's view the data on a map using the package `mapview`. The purpose of this map is to briefly inspect the data and make sure that it looks like what we expect - in this case, political boundaries of Japan.
+
+```{r}
+#Create a quick interactive map
+#mapview(jp_boundaries)
+```
+
+
+
+
+
