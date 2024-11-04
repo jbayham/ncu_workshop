@@ -80,8 +80,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
-  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites">Prerequisites</a>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link active" data-scroll-target="#prerequisites">Prerequisites</a>
   <ul class="collapse">
   <li><a href="#reading" id="toc-reading" class="nav-link" data-scroll-target="#reading">Reading</a></li>
   <li><a href="#statistics-japan" id="toc-statistics-japan" class="nav-link" data-scroll-target="#statistics-japan">Statistics Japan</a></li>
@@ -91,7 +90,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started">Getting started</a>
   <ul class="collapse">
   <li><a href="#reading-spatial-data" id="toc-reading-spatial-data" class="nav-link" data-scroll-target="#reading-spatial-data">Reading spatial data</a></li>
+  <li><a href="#projections" id="toc-projections" class="nav-link" data-scroll-target="#projections">Projections</a></li>
   </ul></li>
+  <li><a href="#statistics-japan-1" id="toc-statistics-japan-1" class="nav-link" data-scroll-target="#statistics-japan-1">Statistics Japan</a></li>
   </ul>
 </nav>
 </div>
@@ -120,11 +121,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<!-- flashy geospatial image -->
-<section id="introduction" class="level2">
-<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p><img src="banner.png" class="img-fluid" style="width:100.0%"></p>
 <p>The objective of this workshop is to introduce you to geospatial data. You will acquire, assemble, process, and map spatial data.</p>
-</section>
 <section id="prerequisites" class="level2">
 <h2 class="anchored" data-anchor-id="prerequisites">Prerequisites</h2>
 <section id="reading" class="level3">
@@ -211,7 +209,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#This is an introduction to working with spatial data in R</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pacman) <span class="co">#if you have never used this package, you need to install it: install.packages("pacman)</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse,sf,mapview)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse,sf,tmap)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(<span class="st">"your_path/workshop_01"</span>)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
@@ -234,13 +232,101 @@ Bounding box:  xmin: 122.9335 ymin: 20.42274 xmax: 153.9869 ymax: 45.55733
 Geodetic CRS:  ITRF94</code></pre>
 </div>
 </div>
-<p>Note that the directory <code>gm-jpn-all_u_2_2</code> was created by default when unzipping the downloaded file. If successful, R prints out information in the console. First, the data format is ESRI Shapefile, which is one of many formats for storing spatial data. The <code>sf</code> package read the data in and created a simple feature collection with 2914 rows (features) and 9 columns (fields, variables or attributes). The features are polygons, which are enclosed multi-sided shapes defined by a series of points with lines connecting them. We can ignore the dimensions and bounding box for now. The Geodetic CRS is ITRF94 (<a href="https://epsg.io/4916" class="uri">https://epsg.io/4916</a>), which defines the coordinate reference system. This is information that tells <code>sf</code> how to interpret the location information (coordinates).</p>
-<p>Let’s view the data on a map using the package <code>mapview</code>. The purpose of this map is to briefly inspect the data and make sure that it looks like what we expect - in this case, political boundaries of Japan.</p>
+<p>Note that the directory <code>gm-jpn-all_u_2_2</code> was created by default when unzipping the downloaded file. If successful, R prints out information in the console. First, the data format is ESRI Shapefile, which is one of many formats for storing spatial data. The <code>sf</code> package read the data in and created a simple feature collection with 2914 rows (features) and 9 columns (fields, variables or attributes). The features are polygons, which are enclosed multi-sided shapes defined by a series of points with lines connecting them. We can ignore the dimensions and bounding box for now. The Geodetic CRS is ITRF94 (<a href="https://epsg.io/4916" class="uri">https://epsg.io/4916</a>), which defines the coordinate reference system. This is information that tells <code>sf</code> how to interpret the location information (coordinates). More on the CRS and projection shortly.</p>
+<p>Let’s view the data on a map using the package <code>tmap</code>. The purpose of this map is to briefly inspect the data and make sure that it looks like what we expect - in this case, political boundaries of Japan. We will spend more time learning how to create maps later.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Create a quick interactive map</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">#mapview(jp_boundaries)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>jp_map <span class="ot">&lt;-</span> <span class="fu">tm_basemap</span>(<span class="st">"CartoDB.Positron"</span>) <span class="sc">+</span> <span class="co">#start with a basemap</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(jp_boundaries) <span class="sc">+</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">alpha =</span> .<span class="dv">1</span>,<span class="at">col=</span><span class="st">"red"</span>) <span class="co">#define red and semi-transparent fill color  </span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#Display as interactive leaflet</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#tmap_leaflet(jp_map)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The layer <code>jp_boundaries</code> aligns with the basemap, lending some confidence that the boundaries data was read in correctly.</p>
+</section>
+<section id="projections" class="level3">
+<h3 class="anchored" data-anchor-id="projections">Projections</h3>
+<p>Let’s briefly digress to go over the <a href="https://r.geocompx.org/spatial-class#crs-intro">coordinate reference system (CRS)</a>. The CRS combines a coordinate system with a datum. A coordinate system can be geographic (latitude and longitude on a spherical model of the Earth) or projected (coordinates transformed onto a flat surface, like x and y). A datum is a mathematical model of the Earth that defines the position of the origin, scale, and orientation of the coordinate system. Spatial data need a CRS to plot them on a map.</p>
+<p>In the case of <code>jp_boundaries</code>, the CRS is defined in the .shp file that we read into R. In cases where the CRS is not defined, which may happen when you read in coordinates from a text file or non-spatial format, you may need to assign and transform the projection.</p>
+<p>Here is a quick example. Run each line individually and inspect the object at each step.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Define a point in a dataframe - lat is like the y coord and lon is like the x</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>ncu <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">lat=</span><span class="fl">35.138496</span>, <span class="at">lon=</span><span class="fl">136.925901</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Convert the dataframe into a spatial object using st_as_sf() - it is important that lon is first (x,y)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>ncu_geo <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(ncu,<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"lon"</span>,<span class="st">"lat"</span>))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span> (ncu_geo)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 1 feature and 0 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: 136.9259 ymin: 35.1385 xmax: 136.9259 ymax: 35.1385
+CRS:           NA
+                  geometry
+1 POINT (136.9259 35.1385)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot the point like we did above</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>ncu_map <span class="ot">&lt;-</span> <span class="fu">tm_basemap</span>(<span class="st">"CartoDB.Positron"</span>) <span class="sc">+</span> <span class="co">#start with a basemap</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(ncu_geo) <span class="sc">+</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_symbols</span>(<span class="at">col=</span><span class="st">"red"</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#tmap_leaflet(ncu_map)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>You will notice that the object <code>ncu_geo</code> is a simple feature but does not have a CRS defined. When you plot the object, <code>tmap</code> provides a warning that there is no projection defined, so it guesses and is correct in this case. When you define the sf object, you can define a CRS by adding <code>crs=</code> to the function <code>st_as_sf()</code>. I often use the epsg code 4326 for latitude and longitude coordinates because it is <a href="https://epsg.io/4326">WGS84</a>. The line should read: <code>ncu_geo &lt;- st_as_sf(ncu,coords = c("lon","lat"),crs=4326)</code>.</p>
+<p>You can also transform from one projection to another using the function <code>st_transform()</code>. When performing distance-based operations on spatial data, you may need to transform data into a metered projection. Let’s reproject <code>ncu_geo</code> to EPSG <a href="https://epsg.io/2448">2448</a>, which is centered just south of Japan, making it accurate for distance calculations in Central Japan. Now that <code>ncu_geo</code> is in a metered projection, we can buffer the point with a 1 km buffer and plot it. We will do more buffering to process data in later workshops.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Transform the point to epsg 2448 </span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>ncu_geo <span class="ot">&lt;-</span> ncu_geo <span class="sc">%&gt;%</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="dv">2448</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(ncu_geo)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 1 feature and 0 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: 84373.96 ymin: -95182.81 xmax: 84373.96 ymax: -95182.81
+Projected CRS: JGD2000 / Japan Plane Rectangular CS VI
+                    geometry
+1 POINT (84373.96 -95182.81)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Buffer the point creating a circle with 1km radius around the point</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>ncu_buffered <span class="ot">&lt;-</span> ncu_geo <span class="sc">%&gt;%</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_buffer</span>(<span class="at">dist=</span><span class="dv">1000</span>) <span class="co">#the buffer radius is always in the units of the projection - meters in this case</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">#Plot the point and buffer</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>ncu_map <span class="ot">&lt;-</span> <span class="fu">tm_basemap</span>(<span class="st">"CartoDB.Positron"</span>) <span class="sc">+</span> <span class="co">#start with a basemap</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(ncu_geo) <span class="sc">+</span> </span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_symbols</span>(<span class="at">col=</span><span class="st">"red"</span>,<span class="at">size =</span> .<span class="dv">001</span>)  <span class="sc">+</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(ncu_buffered) <span class="sc">+</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">col=</span><span class="st">"darkred"</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co">#tmap_leaflet(ncu_map)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
+</section>
+<section id="statistics-japan-1" class="level2">
+<h2 class="anchored" data-anchor-id="statistics-japan-1">Statistics Japan</h2>
+<p>We have a base layer of administrative areas in Japan. Let’s join data from Statistics Japan to visualize workforce data. <a href="#statistics-japan">Statistics Japan</a></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Call API Key from environmental variables - usethis::edit_r_environ() to set the environmental variables</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>api_key<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"STATISTICS_JAPAN_API_KEY"</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">#stat_tab &lt;- estat_getStatsList(appId = api_key, lang = "E", searchWord = "business conditions")</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>labor_dat <span class="ot">&lt;-</span> <span class="fu">estat_getStatsData</span>(</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">appId =</span> api_key,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">lang =</span> <span class="st">"E"</span>,</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">statsDataId =</span> <span class="st">"0004008528"</span>,</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">cdCat01 =</span> <span class="st">"0"</span>,</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">cdCat02 =</span> <span class="st">"0"</span>,</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">cdCat03 =</span> <span class="st">"0"</span>,</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">cdCat04 =</span> <span class="st">"13"</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cdCat01 = c("002")</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># raw_dat &lt;- test_dat %&gt;%</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   clean_names()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </section>
 
 </main>

@@ -11,12 +11,20 @@ jp_boundaries <- st_read("inputs/gm-jpn-all_u_2_2/polbnda_jpn.shp")
 
 mapview(jp_boundaries)
 
-tmap_mode("view")
+#tmap_mode("view")
 
-tm_basemap("CartoDB.Positron") +
+jp_map <- tm_basemap("CartoDB.Positron") +
   tm_shape(jp_boundaries) +
-  tm_polygons(alpha = .4)
+  tm_polygons(alpha = .1,col="red") 
+  
+tmap_leaflet(jp_map)
 
+
+jp_map <- tm_basemap("CartoDB.Positron") +
+  tm_shape(jp_boundaries %>% filter(pop>0)) +
+  tm_polygons(alpha = 1,col="pop") 
+
+tmap_leaflet(jp_map)
 
 ###############################
 

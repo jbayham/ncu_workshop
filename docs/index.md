@@ -1,6 +1,4 @@
----
-title: "NCU: R Workshops"
----
+
 
 # NCU: R Workshops
 
