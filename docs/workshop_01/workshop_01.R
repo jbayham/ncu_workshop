@@ -60,4 +60,18 @@ jp_labor <- inner_join(jp_boundaries,test_dat2,by=c("adm_code"="area_code")) %>%
 
 mapview(jp_labor,zcol="frac")
 
+jp_map <- #tm_basemap("CartoDB.Positron") +
+  tm_shape(jp_labor) +
+  tm_polygons(alpha = 1,col="value") 
 
+
+tmap_leaflet(jp_map)
+
+pref <- jp_boundaries %>%
+  filter(pop>0) %>%
+  group_by(nam) %>%
+  summarize(pop=sum(pop,na.rm=TRUE),
+            adm_code=first(adm_code)) %>%
+  mutate(adm_code=paste0(str_sub(adm_code,1,2),"000"))
+
+pref_labor <- inner_join(pref,labor_dat,by=c("adm_code"="area_code"))

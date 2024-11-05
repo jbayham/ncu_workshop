@@ -19,7 +19,7 @@ There are many sources and references available online to help you learn to work
 
 You may also find [Geocomputation with R](https://r.geocompx.org/) by Lovelace et al. a helpful resource. It is written for a broader audience, but provides more detail than *R as GIS for Economists*.
 
-### Statistics Japan
+### Statistics Japan API
 
 We will access data from <https://www.e-stat.go.jp/> using their application programming interface (API). You will need to register for an API key in order to use the API. These were the instructions and link names in English. I will update these with instructions in Japanese.
 
@@ -43,7 +43,7 @@ We will be working with packages designed to process and visualize geospatial da
 
 -   `sf`: simple features a package with many utilities for working with spatial vector data
 -   `raster`: a package for working with raster data
--   `mapview`: a package for creating interactive maps of vector and raster data
+-   `tmap`: a package for creating interactive maps of vector and raster data
 -   `ggplot`: a package for plotting data (included in tidyverse)
 
 *Note that you do not need to install packages if they are already installed - you only need to install packages once.*
@@ -210,18 +210,22 @@ ncu_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
 
 ## Statistics Japan
 
-We have a base layer of administrative areas in Japan. Let's join data from Statistics Japan to visualize workforce data. [Statistics Japan]
+We have a base layer of administrative areas in Japan. Let's join data from Statistics Japan to visualize workforce data. First, we need to download data from Statistics Japan. We will use the API to access the data programatically. 
+
+> See the section [Statistics Japan API] if you have not already registered for an API key. 
+
+We are going to download data from the Employment Status Survey 2022, <https://www.e-stat.go.jp/index.php/en/dbview?sid=0004008528>. The table contains a large volume of employment information. One of the survey questions asks respondents whether they are interested in switching jobs ("Wishing to switch to another job (engaged in work (engaged in work who had a previous job))" indicated by cdCat04="13"). We will query the number of people in each spatial unit interested in switching jobs. `cdCat**` are a series of other query parameters filtering for total number of all ages and sexes.
+
 
 ```{r}
-#| eval: false
-
-
 #Call API Key from environmental variables - usethis::edit_r_environ() to set the environmental variables
 api_key=Sys.getenv("STATISTICS_JAPAN_API_KEY")
 
+#Query all tables available
 #stat_tab <- estat_getStatsList(appId = api_key, lang = "E", searchWord = "business conditions")
 
-labor_dat <- estat_getStatsData(
+#Get data from table 0004008528. The arguments cdCat** subset the entire table based on some criteria
+estat_query <- estat_getStatsData(
   appId = api_key,
   lang = "E",
   statsDataId = "0004008528",
@@ -232,8 +236,60 @@ labor_dat <- estat_getStatsData(
   #cdCat01 = c("002")
 )
 
-# raw_dat <- test_dat %>%
-#   clean_names()
-
-
+glimpse(estat_query)
 ```
+
+Inspect the object using `glimpse(estat_query)`. The first row indicates that 849,900 people are interested in switching jobs. Can you find this number on the table displayed on the [webpage](https://www.e-stat.go.jp/index.php/en/dbview?sid=0004008528)? 
+
+Now that we understand the data we obtained, we can remove extraneous information from the dataframe. Use select to keep the following variables only: `area_code, Area classification, value`
+
+```{r}
+labor_dat <- estat_query %>%
+  select(area_code,desc=`Area classification`,value)
+```
+
+Now we are ready to join `labor_dat` (people interested in another job) with the administrative boundaries spatial object, `jp_boundaries`. We use the function `inner_join()` from the `dplyr` package. When joining spatial and non-spatial data, the first argument determines the type. Try changing the order and query the class of the object. The `by=` argument tells the function what variables from the two datasets contain the same information and can be used to join them. Note that the variable names do not need to be the same, but the order matters - the first variable name is from `x` and the second is from `y`.  
+
+```{r}
+jp_labor <- inner_join(x=jp_boundaries,y=labor_dat,by=c("adm_code"="area_code")) 
+
+class(jp_labor)
+
+inner_join(labor_dat,jp_boundaries,by=c("area_code"="adm_code")) %>%
+  class()
+```
+
+### Creating a map
+
+`jp_labor` contains the data that we want to plot and the spatial information about the locations for which we have data. We will create a map of Japan using color to indicate where people are interested in changing jobs. 
+
+```{r}
+# Create map using qtm (quick thematic map)
+qtm(jp_labor,fill="value")
+```
+
+While this technically worked, the map is not very informative or visually appealing.
+
+```{r}
+#| eval: false
+
+
+jp_labor_map <- tm_shape(jp_boundaries) +
+  tm_borders() +
+  tm_shape(jp_labor) +
+  tm_fill(alpha = 1,col="value") 
+
+print(jp_labor_map)
+```
+
+
+
+```{r}
+#| eval: false
+%>%
+  mutate(frac = value/pop)
+```
+
+
+
+
