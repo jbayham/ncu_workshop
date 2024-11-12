@@ -82,7 +82,7 @@ We will be working with packages designed to process and visualize geospatial da
 
 ## Getting started
 
-Let's get some data and read it into R. The Geospatial Information Authority of Japan seems provides downloadable maps of the country: <https://www.gsi.go.jp/kankyochiri/gm_japan_e.html>. Download the Global Map Japan version 2.2 Vector data (Released in 2016) by clicking on the linked file: `gm-jpn-all_u_2_2.zip` (9.2MB). This is a zipped file containing many files. **Note where you download the file**.
+Let's get some data and read it into R. The Geospatial Information Authority of Japan provides downloadable maps of the country: <https://www.gsi.go.jp/kankyochiri/gm_japan_e.html>. Download the *Global Map Japan version 2.2 Vector data (Released in 2016)* by clicking on the linked file: `gm-jpn-all_u_2_2.zip` (9.2MB). This is a zipped file containing many files. **Note where you download the file**.
 
 Before opening Rstudio and working with the data, you should organize your digital workspace.
 
@@ -143,11 +143,11 @@ Let's view the data on a map using the package `tmap`. The purpose of this map i
 ```{r}
 #Create a quick interactive map
 jp_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
-  tm_shape(jp_boundaries) + 
-  tm_polygons(alpha = .1,col="red") #define red and semi-transparent fill color  
+  tm_shape(jp_boundaries) +
+  tm_polygons(alpha = .1,col="red") #define red and semi-transparent fill color
   
 #Display as interactive leaflet
-#tmap_leaflet(jp_map)
+tmap_leaflet(jp_map)
 ```
 
 The layer `jp_boundaries` aligns with the basemap, lending some confidence that the boundaries data was read in correctly.
@@ -205,16 +205,14 @@ ncu_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
   tm_shape(ncu_buffered) +
   tm_borders(col="darkred")
 
-#tmap_leaflet(ncu_map)
+tmap_leaflet(ncu_map)
 ```
 
 ## Statistics Japan
 
-We have a base layer of administrative areas in Japan. Let's join data from Statistics Japan to visualize workforce data. First, we need to download data from Statistics Japan. We will use the API to access the data programatically. 
+We have a base layer of administrative areas in Japan. Let's join data from Statistics Japan to visualize workforce data. First, we need to download data from Statistics Japan. We will use the API to access the data programatically. **See the section [Statistics Japan API] if you have not already registered for an API key.** 
 
-> See the section [Statistics Japan API] if you have not already registered for an API key. 
-
-We are going to download data from the Employment Status Survey 2022, <https://www.e-stat.go.jp/index.php/en/dbview?sid=0004008528>. The table contains a large volume of employment information. One of the survey questions asks respondents whether they are interested in switching jobs ("Wishing to switch to another job (engaged in work (engaged in work who had a previous job))" indicated by cdCat04="13"). We will query the number of people in each spatial unit interested in switching jobs. `cdCat**` are a series of other query parameters filtering for total number of all ages and sexes.
+We are going to download data from the Employment Status Survey 2022, <https://www.e-stat.go.jp/index.php/en/dbview?sid=0004008528>. The table contains a large volume of employment information. One of the survey questions asks respondents whether they are interested in switching jobs ("Wishing to switch to another job (engaged in work (engaged in work who had a previous job))" indicated by cdCat04="13"). We will query the number of people in each spatial unit interested in switching jobs. `cdCat**` are a series of other query parameters filtering for total number of all ages and sexes. You may remove the filters to download more data.
 
 
 ```{r}
@@ -245,8 +243,10 @@ Now that we understand the data we obtained, we can remove extraneous informatio
 
 ```{r}
 labor_dat <- estat_query %>%
-  select(area_code,desc=`Area classification`,value)
+  select(area_code,desc=`Area classification`,value) #select three columns and rename the second one in the process
 ```
+
+### Joining data to create spatial data object
 
 Now we are ready to join `labor_dat` (people interested in another job) with the administrative boundaries spatial object, `jp_boundaries`. We use the function `inner_join()` from the `dplyr` package. When joining spatial and non-spatial data, the first argument determines the type. Try changing the order and query the class of the object. The `by=` argument tells the function what variables from the two datasets contain the same information and can be used to join them. Note that the variable names do not need to be the same, but the order matters - the first variable name is from `x` and the second is from `y`.  
 
@@ -259,7 +259,7 @@ inner_join(labor_dat,jp_boundaries,by=c("area_code"="adm_code")) %>%
   class()
 ```
 
-### Creating a map
+## Creating a map
 
 `jp_labor` contains the data that we want to plot and the spatial information about the locations for which we have data. We will create a map of Japan using color to indicate where people are interested in changing jobs. 
 
@@ -268,28 +268,113 @@ inner_join(labor_dat,jp_boundaries,by=c("area_code"="adm_code")) %>%
 qtm(jp_labor,fill="value")
 ```
 
-While this technically worked, the map is not very informative or visually appealing.
+While this technically worked, the map is not very informative or visually appealing. The labor data we joined with our map contained data a three levels: national, prefecture, and city (shi). The `jb_boundaries` layer contains the cities (highest resolution). Mapping the prefecture data may provide more information about labor force in different regions across the country. 
+
+### Spatial Aggregation
+
+We need a map layer of the prefectures. We could go find one or aggregate the data layer we already have. We can aggregate elements in `sf` objects by using the `group_by() %>% summarize()` workflow in `dplyr`. Let's create a prefecture layer by aggregating the cities (Shi) up to prefectures (Ken):
 
 ```{r}
-#| eval: false
+#Create prefecture layer by aggregating 
+pref <- jp_boundaries %>%
+  filter(pop>0) %>% #keep only areas with people in them
+  group_by(nam) %>% #the column "nam" contains the prefecture name
+  summarize(pop=sum(pop,na.rm=TRUE), #adding population 
+            adm_code=first(adm_code)) %>% #keeping the first admin code for each area
+  mutate(adm_code=paste0(str_sub(adm_code,1,2),"000")) #replacing the last three digits of the admin code with "000" to enable join with labor data
+```
 
+> Can you plot the new layer to confirm the aggregation worked?
 
-jp_labor_map <- tm_shape(jp_boundaries) +
-  tm_borders() +
-  tm_shape(jp_labor) +
-  tm_fill(alpha = 1,col="value") 
+Now we need to rejoin the labor data with this new prefecture boundary data.
 
-print(jp_labor_map)
+```{r}
+#Join sf layer with data
+pref_labor <- inner_join(pref,labor_dat,by=c("adm_code"="area_code"))
+
+#Quick plot of the new layer
+qtm(pref_labor,fill="value")
 ```
 
 
+### Refining the map
+
+Let's zoom in to the most populated areas and omit the far away archipelagos by defining a bounding box. There are several online mapping tools that you can use to help find a bounding box that you like (e.g., https://boundingbox.klokantech.com/).
 
 ```{r}
-#| eval: false
-%>%
-  mutate(frac = value/pop)
+#Define bounding box
+bb <- st_bbox(c(xmin = 129.359609159, xmax = 145.544702085, ymin = 31.0122666666, ymax = 45.5707366225), #named vector of coordinates - x ~ lon and y ~ lat
+              crs = st_crs(4326)) #define the crs so R knows how to interpret the coordinates
+
+```
+
+We will use the more specific functions in `tmap` to build up the layers of the map. 
+
+```{r}
+pref_labor_map <- tm_shape(pref_labor,bbox = bb) +
+  tm_fill(col = "value") + #use the attribute named value to determine the fill color
+  tm_borders(col = "lightgray") + #make the borders a light gray
+  tm_layout(bg.color = "#D1EAF0") #Define a background color and legend position
+
+pref_labor_map
+```
+
+You might notice that the map simply shows which prefectures have the largest populations because we are plotting the number of people open to new jobs. We should normalize this count. Ideally, we would find the number of workers in each prefecture. For simplicity, we will use the population that we have in the data already.
+
+```{r}
+pref_labor_norm <- pref_labor %>%
+  mutate(value_norm = value/pop)
+```
+
+Then recreate the map with the new layer.
+
+```{r}
+pref_labor_map <- tm_shape(pref_labor_norm,bbox = bb) +
+  tm_fill(col = "value_norm") + #use the attribute named value to determine the fill color
+  tm_borders(col = "lightgray") + #make the borders a light gray
+  tm_layout(bg.color = "#D1EAF0") #Define a background color and legend position
+
+pref_labor_map
+```
+
+The pattern changed a bit but the highest percentages still seem to be around Tokyo. Let's fix the legend to reflect the units of the map and add a scale and compass. 
+
+- First, we can add the `title` argument to `tm_fill()` to change the legend title. Then, we can add a function to the `legend.format` argument to change the display of the numbers in the legend to percent. 
+
+- We use `tm_compass()` to add a compass. I personally like the four point star, but you can choose what you like.
+
+- We use `tm_scale_bar()` to add a scale bar. See the documentation for more customization options.
+
+```{r}
+pref_labor_map <- tm_shape(pref_labor_norm,bbox = bb) +
+  tm_fill(col = "value_norm",   #use the attribute named value to determine the fill color
+          title = "New Job Interest", #change title to legend
+          legend.format = list(fun=function(x){paste0(x*100,"%")})) +  #use function to make numbers percents
+  tm_borders(col = "lightgray") + #make the borders a light gray
+  tm_compass(type = "4star") +
+  tm_scale_bar() +
+  tm_layout(bg.color = "#D1EAF0") #Define a background color and legend position
+
+pref_labor_map
+```
+
+A very nice feature of tmap is that you can generate an interactive map that can be easily embedded in a website with very little additional code.
+
+```{r}
+tmap_leaflet(pref_labor_map)
 ```
 
 
+## Summary
+
+The following is a list of topics covered today:
+
+- Reading in external geospatial data using `st_read()`
+- Downloading data from Statistics Japan API
+- Coordinate Reference System and reprojecting data
+- Joining spatial and non-spatial data
+- Mapping with `tmap()` and customizing
+
+The best way to learn to write code is to practice and experiment with the code. A simple extension would be to get other data from the Statistics Japan API and create a map following the steps in this tutorial.
 
 
