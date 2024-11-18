@@ -5,73 +5,84 @@ pacman::p_load(tidyverse,sf,tmap)
 
 setwd("~/Documents/git_projects/ncu_workshop/docs/workshop_01")
 
-#############################
-
+######################
+#Read in Japan political boundaries
 jp_boundaries <- st_read("inputs/gm-jpn-all_u_2_2/polbnda_jpn.shp")
 
-mapview(jp_boundaries)
 
-#tmap_mode("view")
-
-jp_map <- tm_basemap("CartoDB.Positron") +
+#Create a quick interactive map
+jp_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
   tm_shape(jp_boundaries) +
-  tm_polygons(alpha = .1,col="red") 
-  
+  tm_polygons(alpha = .1,col="red") #define red and semi-transparent fill color
+
+#Display as interactive leaflet
 tmap_leaflet(jp_map)
 
+#############################
+#Define a point in a dataframe - lat is like the y coord and lon is like the x
+ncu <- data.frame(lat=35.138496, lon=136.925901)
 
-jp_map <- tm_basemap("CartoDB.Positron") +
-  tm_shape(jp_boundaries %>% filter(pop>0)) +
-  tm_polygons(alpha = 1,col="pop") 
+#Convert the dataframe into a spatial object using st_as_sf() - it is important that lon is first (x,y)
+ncu_geo <- st_as_sf(ncu,coords = c("lon","lat"), crs=4326) 
+print (ncu_geo)
 
-tmap_leaflet(jp_map)
+ncu_geo <- ncu_geo %>%
+  st_transform(2448)
 
-###############################
+ncu_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
+  tm_shape(ncu_geo) + 
+  tm_symbols(col="red")
+
+tmap_leaflet(ncu_map)
+
+
+#Buffer the point creating a circle with 1km radius around the point
+ncu_buffered <- ncu_geo %>%
+  st_buffer(dist=1000) #the buffer radius is always in the units of the projection - meters in this case
+
+
+#Plot the point and buffer
+ncu_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
+  tm_shape(ncu_geo) + 
+  tm_symbols(col="red",size = .001)  +
+  tm_shape(ncu_buffered) +
+  tm_borders(col="darkred")
+
+tmap_leaflet(ncu_map)
+#####################################
 
 library(estatapi)
-library(janitor)
 
+#Call API Key from environmental variables - usethis::edit_r_environ() to set the environmental variables
 api_key=Sys.getenv("STATISTICS_JAPAN_API_KEY")
 
+#Query all tables available
+#stat_tab <- estat_getStatsList(appId = api_key, lang = "E", searchWord = "business conditions")
 
-stat_tab <- estat_getStatsList(appId = api_key, lang = "E", searchWord = "business conditions")
-
-test_dat <- estat_getStatsData(
+#Get data from table 0004008528. The arguments cdCat** subset the entire table based on some criteria
+estat_query <- estat_getStatsData(
   appId = api_key,
   lang = "E",
-  statsDataId = "0004008528"
+  statsDataId = "0004008528",
+  cdCat01 = "0",
+  cdCat02 = "0",
+  cdCat03 = "0",
+  cdCat04 = "13"
   #cdCat01 = c("002")
 )
-#api_call <- "http://api.e-stat.go.jp/rest/3.0/app/getSimpleStatsData?cdArea=23000&cdCat01=002&appId=&lang=E&statsDataId=0003404084&metaGetFlg=Y&cntGetFlg=N&explanationGetFlg=Y&annotationGetFlg=Y&sectionHeaderFlg=1&replaceSpChars=0"
 
-raw_dat <- test_dat %>%
-  clean_names()
+labor_dat <- estat_query %>%
+  select(area_code,desc=`Area classification`,value) #select three columns and rename the second one in the process
 
-test_dat2 <- raw_dat %>%
-  filter(cat04_code==13,#str_detect(labour_force_status_working,"Wishing to switch to another job"),
-         cat03_code==0, #,age=="Total",
-         cat02_code==0, #sex=="Both sexes")
-         cat01_code==0)
+##########################
+#Joining data
+jp_labor <- inner_join(x=jp_boundaries,y=labor_dat,by=c("adm_code"="area_code")) 
 
-with(test_dat2,table(age,sex))
+class(jp_labor)
 
-jp_labor <- inner_join(jp_boundaries,test_dat2,by=c("adm_code"="area_code")) %>%
-  mutate(frac = value/pop)
+# inner_join(labor_dat,jp_boundaries,by=c("area_code"="adm_code")) %>%
+#   class()
 
-mapview(jp_labor,zcol="frac")
+# Create map using qtm (quick thematic map)
+qtm(jp_labor,fill="value")
 
-jp_map <- #tm_basemap("CartoDB.Positron") +
-  tm_shape(jp_labor) +
-  tm_polygons(alpha = 1,col="value") 
-
-
-tmap_leaflet(jp_map)
-
-pref <- jp_boundaries %>%
-  filter(pop>0) %>%
-  group_by(nam) %>%
-  summarize(pop=sum(pop,na.rm=TRUE),
-            adm_code=first(adm_code)) %>%
-  mutate(adm_code=paste0(str_sub(adm_code,1,2),"000"))
-
-pref_labor <- inner_join(pref,labor_dat,by=c("adm_code"="area_code"))

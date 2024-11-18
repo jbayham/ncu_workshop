@@ -1,0 +1,95 @@
+---
+title: "Workshop 02: Introduction to Processing Raster and Vector Data"
+author: "Jude Bayham"
+format: 
+  html:
+    theme: zephyr
+    toc: true
+---
+
+<!-- ![](banner.png){width="100%"} -->
+
+The objective of this workshop is to introduce the concept of processing raster and vector data. We will read in and visualize land cover data in Japan. Then we will use spatial operations to summarize raster information around points and inside of polygons.
+
+## Prerequisites
+
+### Reading
+
+Chapters 4 and 6 from [R as GIS for Economists](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/) will help you prepare for the workshop.
+
+### Land Cover Data
+
+We will use [High-Resolution Land-Use and Land-Cover](https://www.eorc.jaxa.jp/ALOS/en/dataset/lulc_e.htm) data from the Japan Aerospace Exploration Agency (JAXA). The data is published in various resolutions. We will use the 250 meter resolution data for illustration, but the code we write could be easily adapted for the higher-resolution versions of the data. JAXA does request that you register to download their data. The datasets we will use are posted here for ease:
+
+-   [JAXA_HRLULC_Japan_v23.12_250m.tif (2022)](inputs/JAXA_HRLULC_Japan_v23.12_250m.tif)
+
+-   [JAXA_HRLULC_Japan_v21.11_250m.tif (2018 - 2020)](inputs/JAXA_HRLULC_Japan_v21.11_250m.tif)
+
+### RStudio
+
+We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages on the computer you will be using:
+
+-   `sf`: simple features a package with many utilities for working with spatial vector data
+-   `raster`: a package for working with raster data
+-   `terra`: another package for working with raster data
+-   `stars`: a package for working with spatiotemporal data
+-   `exactextractr`: an optimized package for extracting and aggregating raster data to polygons
+-   `tmap`: a package for creating interactive maps of vector and raster data
+
+*Note that you do not need to install packages if they are already installed - you only need to install packages once.*
+
+## Getting started
+
+Before opening Rstudio and working with the data, you should organize your digital workspace.
+
+1.  Create a directory for this workshop titled: `workshop_02`. If you already have a directory for this class/seminar, create the directory under the class directory.
+
+2.  Create a directory titled `inputs` under `workshop_02`. The path should be `workshop_02/inputs`.
+
+3.  Download and move the [Land Cover Data] into `workshop_02/inputs`.
+
+4.  We are also going to use the Japan political boundaries file from last week. Locate that file and copy it into `workshop_02/inputs`.
+
+Open up Rstudio and do the following:
+
+1.  Open a new script.
+
+2.  Write a comment with a brief description about what the script does. In most cases, you know the intention of the script.
+
+3.  Load the package `pacman` and use `p_load()` to install and load the packages we will be using in this workshop.
+
+4.  Navigate to `workshop_02` (the directory you just created for the project). You can use the dropdown menu Session \> Set Working Directory \> Choose Directory or type the `setwd("path_here")` command at the top of your script. If you use the dropdown menu, R will generate the `setwd()` command and display it in the console. Copy and paste it into your script.
+
+5.  Save your script and title the file: `workshop_02.R`
+
+The first several lines of your script should look something like this:
+
+```{r}
+#| eval: false
+#This is an introduction to working with spatial data in R
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap)
+
+setwd("your_path/workshop_02")
+
+######################
+```
+
+### Reading spatial data
+
+Now we are ready to read in our spatial data. We will start with vector spatial data (see <https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/chapters/04-RasterDataBasics.html> for details on vector data). Read in the data using the following command:
+
+```{r}
+#| echo: false
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap)
+
+```
+
+```{r}
+#Read in Japan political boundaries
+#jp_boundaries <- st_read("inputs/polbnda_jpn.shp")
+
+```
