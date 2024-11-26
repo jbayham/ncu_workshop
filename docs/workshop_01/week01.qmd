@@ -286,6 +286,15 @@ pref <- jp_boundaries %>%
 
 > Can you plot the new layer to confirm the aggregation worked?
 
+We will use this prefecture level data in the next workshop, so let's save `pref`.
+
+```{r}
+#Save pref in geopackage format
+st_write(obj = pref,
+         dsn = "japan_prefecture.gpkg")
+```
+
+
 Now we need to rejoin the labor data with this new prefecture boundary data.
 
 ```{r}
