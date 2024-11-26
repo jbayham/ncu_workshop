@@ -49,4 +49,7 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-.DS_Store
+*.DS_Store
+docs/workshop_02/prelim.R
+docs/workshop_02/to_upload.R
+*.zip
