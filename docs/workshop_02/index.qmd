@@ -69,7 +69,7 @@ The first several lines of your script should look something like this:
 #This is an introduction to working with spatial data in R
 
 library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
-pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap)
+pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap,measurements)
 
 setwd("your_path/workshop_02")
 
@@ -80,14 +80,13 @@ setwd("your_path/workshop_02")
 #| echo: false
 
 library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
-pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap)
+pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap,measurements)
 
 ```
 
 ## Reading spatial data
 
 We will primarily be using two spatial layers in this workshop. The first is the prefecture layer that we created in workshop 1. The second is the [Land Cover Data] described above. Let's start by reading in the land cover layer.
-
 
 ### Step 1: Loading and Preparing Raster Data
 
@@ -97,8 +96,6 @@ We begin by loading a raster dataset representing land cover in Japan. `terra::r
 # Read in land cover raster data
 jp_lc <- terra::rast("inputs/JAXA_HRLULC_Japan_v23.12_250m.tif")
 ```
-
-
 
 ### Step 2: Converting Coordinates to a Spatial Object
 
@@ -110,7 +107,6 @@ ncu_point <- data.frame(lat = 35.138496, lon = 136.925901) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326) # Convert to spatial object
 ```
 
-
 ### Step 3: Creating a Buffer Around the Point
 
 We buffer the point with a radius of 50 km. Buffers are used to analyze spatial relationships within a specified distance.
@@ -121,7 +117,6 @@ ncu_buffered <- ncu_point %>%
   st_buffer(dist = 50000) # Distance is in meters for CRS 4326
 ```
 
-
 ### Step 4: Cropping the Raster to the Buffer Area
 
 We crop the raster data to the extent of the buffered area to focus the analysis. `terra::crop()` reduces the extent of the raster to the specified area, making spatial operations more efficient.
@@ -130,7 +125,6 @@ We crop the raster data to the extent of the buffered area to focus the analysis
 # Crop raster layer to the buffered area
 jp_lc_cropped <- terra::crop(jp_lc, ncu_buffered)
 ```
-
 
 ### Step 5: Visualizing the Data
 
@@ -150,8 +144,6 @@ ncu_map_rast <- tm_basemap("CartoDB.Positron") +  # Add a basemap
 # Render the map
 tmap_leaflet(ncu_map_rast)
 ```
-
-
 
 ### Step 6: Assigning a Color Palette to Categories
 
@@ -173,7 +165,6 @@ cat_ref <- data.frame(ID = 1:length(categories), label = categories)
 levels(jp_lc_cropped) <- cat_ref
 ```
 
-
 ### Step 7: Adding Color-Coded Raster to the Map
 
 We re-visualize the data with the defined color palette.
@@ -192,11 +183,6 @@ ncu_map_rast <- tm_basemap("CartoDB.Positron") +  # Add basemap
 # Render the updated map
 tmap_leaflet(ncu_map_rast)
 ```
-
-
-Certainly! Below is the R code for calculating the area inside the `ncu_buffered` corresponding to each land cover type using the `exactextractr` package:
-
----
 
 ### Step 8: Calculating Area by Land Cover Type
 
@@ -222,58 +208,101 @@ area_summary <- area_summary %>%
 print(area_summary)
 ```
 
----
+------------------------------------------------------------------------
 
 ### Explanation of the Code:
-1. **`exact_extract`**: Extracts raster values and the fraction of each raster cell covered by the buffer area. Setting `include_area=TRUE` allows calculating the area in square meters.
-2. **`coverage_fraction * area`**: Multiplies the fraction of the cell within the buffer by the cell's area to compute the weighted area for each land type.
-3. **`group_by` and `summarize`**: Aggregates the total area by land cover type.
-4. **`left_join` with `cat_ref`**: Adds descriptive land cover labels to the results for better interpretation.
 
+1.  **`exact_extract`**: Extracts raster values and the fraction of each raster cell covered by the buffer area. Setting `include_area=TRUE` allows calculating the area in square meters.
+2.  **`coverage_fraction * area`**: Multiplies the fraction of the cell within the buffer by the cell's area to compute the weighted area for each land type.
+3.  **`group_by` and `summarize`**: Aggregates the total area by land cover type.
+4.  **`left_join` with `cat_ref`**: Adds descriptive land cover labels to the results for better interpretation.
 
 ## Solar Panel Coverage
 
 As I looked at this data, I wondered weather area covered by solar panels has increased over time. Only the last two versions of the land cover data contain solar panel classification, so we will use the past two versions to compare prefecture level
 
+### Step 1: Loading and Preparing the Data
 
-
-### Step 1: Loading Vector Data
-
-Finally, we load vector data representing Japan's prefecture boundaries.
+First, we load vector data representing Japan's prefecture boundaries. Let's transform the prefecture data to the same CRS as the land cover data. In this case, transforming the vector data is more efficient than the raster data.
 
 ```{r}
 # Read Japan prefecture boundaries
-pref <- st_read("inputs/japan_prefecture.gpkg")
-```
-
-
-
-```{r}
-
-
-# Do calculation with japan prefectures
-#Read in Japan prefecture boundaries
 pref <- st_read("inputs/japan_prefecture.gpkg") %>%
   st_transform(st_crs(jp_lc))
+```
 
+Then, let's load the two raster layers
+
+```{r}
+#We've already loaded the first layer, so let's just rename it for clarity
+jp_lc_2022 = jp_lc
+#Connect to 2018 land cover data
+jp_lc_2018 <- terra::rast("inputs/JAXA_HRLULC_Japan_v21.11_250m.tif")
+```
+
+### Step 2: Extract
+
+We have loaded/connected to polygons of the prefectures and land cover raster data. Recall that the raster cells contain an integer value representing the land cover classification. We want to extract all of the values within each polygon in `pref`. `exactextractr::exact_extract()` is designed to do this and much more. The first argument `x` is the raster layer. The second argument `y` is the vector layer containing the polygons that you want to extract data over. `include_area = TRUE` tells the function to include the cell area, which does vary by latitude in our case because of [distortions caused by the projection](https://www.researchgate.net/figure/The-area-of-raster-pixels-in-the-WGS84-coordinate-reference-system-expressed-as-a_fig3_368311120). `progress = FALSE` turns off the progress bar.
+
+**Note that this operation took about 5 seconds on my macbook pro and consumes about 200MB of RAM.**
+
+```{r}
 # Use prefecture level data to extract land cover cell values for each prefecture
-ex_l1 <- exact_extract(jp_lc, 
-                       pref, 
-                       include_area = TRUE,
-                       progress = FALSE)
+ex_jp_lc <- exact_extract(x = jp_lc, 
+                          y = pref, 
+                          include_area = TRUE,
+                          progress = FALSE)
+```
 
+The result is a 47-element list of data frames (one for each prefecture) containing the land cover classification (value), area (in meters squared), and the fraction of a cell inside of the polygon (coverage_fraction) of all raster cells overlapping with polygons. The order of the list elements follows the `pref` as it was input to `exact_extract()`.
 
+### Step 3: Calculate area by land classification
+
+We want to calculate the area covered by each land cover type within each prefecture. Let's start by calculating the area of the first data frame in the list, which happens to be Aichi Ken.
+
+```{r}
+aichi <- ex_jp_lc[[1]] %>%
+  group_by(value) %>%
+  summarise(area_m2 = sum(coverage_fraction * area, na.rm = TRUE)) %>%
+  mutate(adm_code = pref$adm_code[1])
+
+print(aichi)
+```
+
+The result is the area calculated for each land cover type in Aichi Ken in square meters. See `measurements$unit_conv()` for a set of convenience functions to convert units. Now that we know our method works and is relatively efficient, we can apply it to all of the list elements using a function called `lapply()` or list apply.
+
+**Note that we could have entered `ex_jp_lc` as the argument of `lapply` directly and written the function to accept a dataframe, but we want to be able to reference elements in `pref` too.**
+
+```{r}
 # Process results for each polygon
-areas_list <- lapply(seq_along(ex_l1), function(i) {
-  data <- ex_l1[[i]] %>%
+areas_list <- lapply(seq_along(ex_jp_lc), function(i) { #Define an anonymous function to apply to each element i of a vector of 1 to 47 (the length of ex_jp_lc)
+  data <- ex_jp_lc[[i]] %>%
     group_by(value) %>% # Group by land cover type
-    summarise(total_area_m2 = sum(coverage_fraction * area, na.rm = TRUE)) %>% # Calculate area
+    summarise(area_m2 = sum(coverage_fraction * area, na.rm = TRUE)) %>% # Calculate area
     mutate(adm_code = pref$adm_code[i]) # Add prefecture name (assumes NAME_1 is the column with prefecture names)
 })
+```
 
+`areas_list` contains data frames for each prefecture with 14 rows for each land type and 3 columns. Since we appended the adm_code and the data frames share the same three variables, we can append them (row-wise):
+
+```{r}
 # Combine results for all polygons
-sum_l1 <- bind_rows(areas_list)
+pref_areas <- bind_rows(areas_list)
+```
 
+`pref_areas` contains the area of each land type in each prefecture in long form. Many functions are optimized for long form data but it can be counter intuitive if it is not familiar. You may want to reshape the data for inspection or sharing.
+
+```{r}
+#Reshaping long to wide
+pref_areas_wide <- pref_areas %>%
+  pivot_wider(id_cols = adm_code,
+              names_from = value,
+              values_from = area_m2)
+```
+
+We have calculated the land cover area by prefecture in 2022. Now we need to do it again for 2018, and we may want to do it for future vintages of the land cover data. We could copy and paste our code but replace the initial raster connection with `jp_lc_2018`. If you find yourself copying and pasting code to redo as task, you should probably write a function.
+
+```{r}
 # Lets make it a function
 calculate_areas <- function(raster_layer, user_polygons) {
   ex_temp <- exact_extract(raster_layer, 
@@ -286,28 +315,84 @@ calculate_areas <- function(raster_layer, user_polygons) {
   areas_list <- lapply(seq_along(ex_temp), function(i) {
     data <- ex_temp[[i]] %>%
       group_by(value) %>% # Group by land cover type
-      summarise(total_area_m2 = sum(coverage_fraction * area, na.rm = TRUE)) %>% # Calculate area
+      summarise(area_m2 = sum(coverage_fraction * area, na.rm = TRUE)) %>% # Calculate area
       mutate(adm_code = user_polygons$adm_code[i]) # Add prefecture name (assumes NAME_1 is the column with prefecture names)
   }) %>%
     bind_rows()
 
 }
+```
 
+Now we can apply our function to both vintages of data, making the code easier to follow. We also want to apply more informative land classification labels and colors for plotting. Fortunately, the categories and color scheme we created before, apply to the 2018 data as well. Types wetland (13) and greenhouse (14) are ommitted from the 2018 vintage. We should also include more useful prefecture labels.
 
-jp_lc_2022 = jp_lc
-#Read in land cover data
-jp_lc_2018 <- terra::rast("inputs/JAXA_HRLULC_Japan_v21.11_250m.tif")
-
+```{r}
 sum_2022 <- calculate_areas(jp_lc_2022,pref) %>%
-  mutate(year=2022)
+  mutate(year=2022) 
 
 sum_2018 <- calculate_areas(jp_lc_2018,pref) %>%
-  mutate(year=2018)
+  mutate(year=2018) 
 
-#combine
-bind_rows(sum_2018,sum_2022) %>%
+pref_lc <- bind_rows(sum_2018,sum_2022) %>%
+  inner_join(cat_ref,by = c("value"="ID")) %>%
+  inner_join(st_drop_geometry(pref),by = "adm_code")
+```
+
+### Step 4: Plotting the difference
+
+Did the area covered by solar panels increase from 2018 to 2022?
+
+```{r}
+#Plot the change in solar panels
+pref_lc %>%
   filter(value==12) %>%
-  ggplot(aes(x=adm_code,y=total_area_m2,fill = as_factor(year))) +
+  ggplot(aes(y=nam,x=area_m2,fill = as_factor(year))) +
   geom_col(position = "dodge")
 ```
+
+The answer appears to be yes, there is more land covered by solar in 2022 compared to 2018. However, the plot is not very clear. Let's improve the figure by:
+
+- reordering the prefectures by value
+- clarifying the axes and legend labels
+- adding a descriptive title
+- increasing the font size
+
+```{r}
+#| fig-height: 8
+
+#Plot the change in solar panels
+pref_lc %>%
+  filter(value==12) %>%
+  ggplot(aes(y=reorder(nam,area_m2),x=conv_unit(area_m2,"m2","hectare"),fill = as_factor(year))) +
+  geom_col(position = "dodge") +
+  labs(x="Area (hectares)",y=NULL,title = "Solar Coverage in Japan Prefectures") +
+  scale_fill_discrete(name = "Year") +
+  theme_bw(base_size = 12)
+
+```
+
+We can estimate a simple two-way fixed effects regression to study which land uses are substitutes and complements to solar panels. First, let's collapse the forest variables since they are fairly correlated.
+
+```{r}
+#| eval: false
+
+library(fixest)
+reg_dat <- pivot_wider(pref_lc,
+                       id_cols = c(nam,year),
+                       names_from = label,
+                       values_from = area_m2) %>%
+  janitor::clean_names() %>%
+  mutate(df=deciduous_broad_leaved_forest_dbf + deciduous_needle_leaved_forest_dnf,
+         ef=evergreen_needle_leaved_forest_enf + evergreen_broad_leaved_forest_ebf)
+
+m1 <- feols(solar_panel ~ built_up + cropland + paddy_field + bare + df + ef | nam + year,
+            data = reg_dat)
+
+etable(m1)
+```
+
+
+## Summary
+
+This workshop demonstrated how to process both vector and spatial raster data to answer a question.
+
 
