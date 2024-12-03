@@ -69,7 +69,7 @@ The first several lines of your script should look something like this:
 #This is an introduction to working with spatial data in R
 
 library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
-pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap,measurements)
+pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap,measurements,fixest,janitor)
 
 setwd("your_path/workshop_02")
 
@@ -80,7 +80,7 @@ setwd("your_path/workshop_02")
 #| echo: false
 
 library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
-pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap,measurements)
+pacman::p_load(tidyverse,sf,raster,terra,stars,exactextractr,tmap,measurements,fixest,janitor)
 
 ```
 
@@ -370,12 +370,17 @@ pref_lc %>%
 
 ```
 
-We can estimate a simple two-way fixed effects regression to study which land uses are substitutes and complements to solar panels. First, let's collapse the forest variables since they are fairly correlated.
+### Step 5: FE Regression
+
+We can estimate a simple two-way fixed effects regression to study which land uses are substitutes and complements to solar panels. We want to regress land used for solar panels on other land uses with controls for prefecture and year. First, we need to prepare the data for regression. 
+
+1. Reshape the data from long to wide format so that each land use is a different variable (and clean the names)
+2. Collapse the forest variables since they are fairly correlated.
 
 ```{r}
 #| eval: false
 
-library(fixest)
+#Prepare data
 reg_dat <- pivot_wider(pref_lc,
                        id_cols = c(nam,year),
                        names_from = label,
@@ -384,15 +389,18 @@ reg_dat <- pivot_wider(pref_lc,
   mutate(df=deciduous_broad_leaved_forest_dbf + deciduous_needle_leaved_forest_dnf,
          ef=evergreen_needle_leaved_forest_enf + evergreen_broad_leaved_forest_ebf)
 
+#Estimate FE OLS regression and store results in m1
 m1 <- feols(solar_panel ~ built_up + cropland + paddy_field + bare + df + ef | nam + year,
             data = reg_dat)
 
+#Print table out in console
 etable(m1)
 ```
 
+This simple FE regression suggests that built up land is a complement and crop land is a substitute (the other coefficients are insignificant). Are these results consistent with your intuition? How do we interpret the coefficients?
 
 ## Summary
 
-This workshop demonstrated how to process both vector and spatial raster data to answer a question.
+This workshop demonstrated how to process both vector and spatial raster data to answer a question. We cropped a raster layer for easier processing. We extracted raster cell values inside of `sf` polygons of prefectures. We wrote a function to easily repeat the calculations.
 
 
