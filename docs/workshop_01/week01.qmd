@@ -291,7 +291,8 @@ We will use this prefecture level data in the next workshop, so let's save `pref
 ```{r}
 #Save pref in geopackage format
 st_write(obj = pref,
-         dsn = "japan_prefecture.gpkg")
+         dsn = "japan_prefectures.gpkg",
+         delete_layer = TRUE)
 ```
 
 
