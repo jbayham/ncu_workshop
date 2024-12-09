@@ -1,0 +1,246 @@
+---
+title: "Workshop 03: Processing and Analyzing Raster Data"
+author: "Jude Bayham"
+format: 
+  html:
+    theme: zephyr
+    toc: true
+---
+
+<!-- ![](banner.png){width="100%"} -->
+
+The objective of this workshop is to demonstrate how to process multiple raster layers. We will work with digital elevation model (DEM) data and continue using land cover data in Japan. Then we will use very efficient raster operations to process and summarize the data.
+
+## Prerequisites
+
+### Reading
+
+[R as GIS for Economists](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/) remains a useful reference.
+
+### DEM
+
+We will use a digital elevation model (DEM) based on imagery taken by the [Shuttle Radar Topography Mission (SRTM GL3) Global 90m](https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1) and accessed via the R package `elevatr` and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code [here](get_elevation.R). Please download the data I have posted here:
+
+-   [Japan DEM (by prefecture)]()
+
+-   [Japan DEM (merged)]()
+
+
+
+### RStudio
+
+We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages on the computer you will be using:
+
+-   `sf`: simple features a package with many utilities for working with spatial vector data
+-   `raster`: a package for working with raster data
+-   `terra`: another package for working with raster data
+-   `exactextractr`: an optimized package for extracting and aggregating raster data to polygons
+-   `tmap`: a package for creating interactive maps of vector and raster data
+
+*Note that you do not need to install packages if they are already installed - you only need to install packages once.*
+
+## Getting started
+
+Before opening Rstudio and working with the data, you should organize your digital workspace.
+
+1.  Create a directory for this workshop titled: `workshop_03`. If you already have a directory for this class/seminar, create the directory under the class directory.
+
+2.  Create a directory titled `inputs` under `workshop_03`. The path should be `workshop_03/inputs`.
+
+3.  Download and move the [DEM] files into `workshop_03/inputs`.
+
+4.  We will also continue using the land cover data from workshop 02. Copy the file JAXA_HRLULC_Japan_v23.12_250m.tif (2022) into `workshop_03/inputs`.
+
+<!-- We are also going to use the Japan political boundaries file from last week. Locate that file and copy it into `workshop_02/inputs`. -->
+
+Open up Rstudio and do the following:
+
+1.  Open a new script.
+
+2.  Write a comment with a brief description about what the script does. In most cases, you know the intention of the script.
+
+3.  Load the package `pacman` and use `p_load()` to install and load the packages we will be using in this workshop.
+
+4.  Navigate to `workshop_03` (the directory you just created for the project). You can use the dropdown menu Session \> Set Working Directory \> Choose Directory or type the `setwd("path_here")` command at the top of your script. If you use the dropdown menu, R will generate the `setwd()` command and display it in the console. Copy and paste it into your script.
+
+5.  Save your script and title the file: `workshop_03.R`
+
+The first several lines of your script should look something like this:
+
+```{r}
+#| eval: false
+#This is an introduction to working with spatial data in R
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,raster,terra,tmap)
+
+setwd("your_path/workshop_03")
+
+######################
+```
+
+```{r}
+#| echo: false
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,raster,terra,tmap)
+
+```
+
+## Raster Aggregation and Zonal Statistics
+
+We will start by reading in the DEM and land cover raster layers. Our objective is to summarize the DEM information based on the land cover classification. We will illustrate the methods using only the data from Aichi, but the steps apply to all layers.
+
+### Step 1: Loading and Preparing Raster Data
+
+We begin by connecting to each raster dataset using `terra::rast()`. Note that we immediately crop our land cover layer to the extent of `aichi_dem`. Notice that the resolution is different.
+
+```{r}
+# Connect to 
+aichi_dem <- rast("inputs/jp_dem/aichi_ken.tif")
+
+print(aichi_dem)
+
+# Read in land cover raster data
+aichi_lc <- terra::rast("inputs/JAXA_HRLULC_Japan_v23.12_250m.tif") %>%
+  terra::crop(aichi_dem) #crop to dem extent
+
+print(aichi_lc)
+```
+
+We can also plot the data to see that it generally matches our expecations.
+
+```{r}
+#Plot DEM
+plot(aichi_dem)
+
+#Plot land cover 
+plot(aichi_lc)
+```
+
+
+### Step 2: Resampling
+
+We want to summarize data in one layer based on the other. However, the DEM is 90-meter resolution and the land cover is 250-meter resolution. As researchers, we are generally limited by the lowest-resolution data. In this case, the land cover data is 250-meter (higher resolution data is available). The function `terra::resample()` efficiently resamples the higher-resolution data to match the lower-resolution data. Print the metadata describing the layer. 
+
+```{r}
+# Resample elevation data to 250m to match land cover resolution
+aichi_dem_resampled <- resample(x = aichi_dem, #to be resampled
+                                y = aichi_lc, #resampled to
+                                method = "bilinear") # Bilinear for continuous data
+
+#Print the metadata
+print(aichi_dem_resampled)
+
+#Formally compare the layers
+compareGeom(aichi_dem_resampled, aichi_lc, stopOnError = FALSE)
+```
+
+### Step 3: Zonal Statistics
+
+Now that we know the layers are aligned, we can use the function `terra::zonal()` to calculate statistics of one layer based on the other. The function name refers to the notion that the values of one layer define the *zone*. In this case, the 14 land cover classifications define the zones.
+
+```{r}
+# Calculate elevation statistics by land cover class
+aichi_stats <- zonal(x = aichi_dem_resampled, #the layer to ve calculated
+                     z = aichi_lc, #the layer defining the zones
+                     fun = "mean", #calculate the mean
+                     na.rm=TRUE, #ignore NAs
+                     as.raster = FALSE) #output into a dataframe instead of raster - this is the default
+
+# Rename the columns
+aichi_stats <- aichi_stats %>%
+  rename(land_class = JAXA_HRLULC_Japan_v23.12_250m,
+         elevation = aichi_ken)
+
+print(aichi_stats)
+```
+
+### Step 4: Terrain
+
+Digital Elevation Models are useful beyond extracting elevation. One can calculate topographic information from elevation, including slope, aspect, ruggedness, among others. `terra::terrain()` can calculate these measurements by cell using information around the cell. Note that there is an identically named function in the `raster` package
+
+```{r}
+#Calculate terrain
+aichi_dem_ter <- terra::terrain(x = aichi_dem,
+                                v = c("slope"),
+                                neighbors = 8)
+
+print(aichi_dem_ter)
+
+#Plot the slope data
+plot(aichi_dem_ter)
+```
+
+As you might expect, the mountainous areas have the steepest slopes. Let's calculate slope, aspect, and ruggedness (see the `terrain()` documentation for calculation details).
+
+```{r}
+#Calculate terrain
+aichi_dem_ter <- terra::terrain(aichi_dem,v=c("slope","aspect","TRI"),neighbors=8)
+
+print(aichi_dem_ter)
+
+#Plot the slope data
+plot(aichi_dem_ter)
+```
+
+Now we can use zonal to calculate the mean of these metrics by land classification. Remember to resample up to 250-meter resolution first.
+
+```{r}
+#reample to 250 meter
+aichi_dem_ter_resampled <- resample(aichi_dem_ter, aichi_lc, method = "bilinear")
+
+#Calculate slope on land classes
+aichi_ter_stats <- zonal(aichi_dem_ter_resampled, aichi_lc, fun = "mean",na.rm=TRUE)
+
+print(aichi_ter_stats)
+
+```
+
+#### Hillshade
+
+You may also want to use the DEM as a baselayer on another map. You can use `terra::shade()` to compute a layer to be plotted as a basemap. 
+
+```{r}
+#Recreate the slope and aspect components in radians
+aichi_ter_rad <- terra::terrain(aichi_dem,v=c("slope","aspect"),unit="radians")
+
+#Construct shade raster
+hill <- shade(aichi_ter_rad$slope, 
+              aichi_ter_rad$aspect, 
+              40, 270)
+
+#Plot it with a gray color scheme
+plot(hill, col=grey(0:100/100), legend=FALSE)
+```
+
+## Rest of Japan
+
+We have illustrated how to resample and summarize data in one layer based on another in Aichi. Given the DEMs for the other prefectures, how could you compute these statistics for all of Japan? 
+
+
+## Summary
+
+These three workshops covered how to work with spatial data. Specifically, the workshop demonstrates how to process vector and raster data, and any combination of the two. The following briefly summarizes the material in each workshop.
+
+Workshop 01
+
+- Merging non-spatial data with spatial data to create thematic maps (choropleth)
+- Coordinate Reference Systems and transformation
+- Using `tmap` to visualize data
+
+Workshop 02
+
+- Extracting raster values based on polygon boundaries
+- Creating a buffer around a point of interest
+- Reassigning color palette for better map making
+- FE regression 
+- Visualizing data over time
+
+Workshop 03
+
+- Resampling raster data to match lower-resolution data
+- Summarizing data in one layer based on categorical data in another layer
+- Use terrain function to calculate slope and more from digital elevation model
+
+
