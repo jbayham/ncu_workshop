@@ -134,7 +134,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="digital-elevation-model-dem" class="level3">
 <h3 class="anchored" data-anchor-id="digital-elevation-model-dem">Digital Elevation Model (DEM)</h3>
-<p>We will use a digital elevation model (DEM) based on imagery taken by the <a href="https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1">Shuttle Radar Topography Mission (SRTM GL3) Global 90m</a> and accessed via the R package <code>elevatr</code> and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code <a href="get_elevation.R">here</a>. Please download the data I have posted here:</p>
+<p>We will use a digital elevation model (DEM) based on imagery taken by the <a href="https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1">Shuttle Radar Topography Mission (SRTM GL3) Global 90m</a> and accessed via the R package <code>elevatr</code> and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code <a href="https://github.com/jbayham/ncu_workshop/blob/b9e580060a1fa2c546bbc87c7021caaaf851ea22/docs/workshop_03/get_elevation.R">here</a>. Please download the data I have posted here:</p>
 <ul>
 <li><p><a href="https://colostate-my.sharepoint.com/:f:/g/personal/jbayham_colostate_edu/EtmtFq2AehFPtO0cD0Dac3kBkL27Fk9EkDtf3AGUNuOoRw?e=fChpiy">Japan DEM (by prefecture)</a> (only need Aichi for the workshop)</p></li>
 <li><p><a href="https://colostate-my.sharepoint.com/:i:/r/personal/jbayham_colostate_edu/Documents/data_storage/_share/ncu_workshop/jp_dem.tif?csf=1&amp;web=1&amp;e=yNvagt">Japan DEM (merged)</a> (Optional)</p></li>
@@ -145,10 +145,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: <code>install.packages("package_name")</code>. <em>Note the quotations</em>. Please install the following packages on the computer you will be using:</p>
 <ul>
 <li><code>sf</code>: simple features a package with many utilities for working with spatial vector data</li>
-<li><code>raster</code>: a package for working with raster data</li>
 <li><code>terra</code>: another package for working with raster data</li>
-<li><code>exactextractr</code>: an optimized package for extracting and aggregating raster data to polygons</li>
-<li><code>tmap</code>: a package for creating interactive maps of vector and raster data</li>
 </ul>
 <p><em>Note that you do not need to install packages if they are already installed - you only need to install packages once.</em></p>
 </section>
@@ -176,7 +173,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#This is an introduction to working with spatial data in R</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pacman) <span class="co">#if you have never used this package, you need to install it: install.packages("pacman)</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse,sf,raster,terra,tmap)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse,terra)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(<span class="st">"your_path/workshop_03"</span>)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
@@ -237,6 +234,7 @@ max value   :                            14 </code></pre>
 <p><img src="index_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p><code>aichi_dem</code> has missing data places covered by water and urban areas. We can confirm this by counting the number of cells with missing values <code>sum(is.na(values(aichi_dem)))</code> and calculating the fraction of the raster covered by NAs <code>sum(is.na(values(aichi_dem)))/ncell(aichi_dem)</code>.</p>
 </section>
 <section id="step-2-resampling" class="level3">
 <h3 class="anchored" data-anchor-id="step-2-resampling">Step 2: Resampling</h3>
@@ -406,6 +404,28 @@ max values  : 50.97108,    360, 76.125 </code></pre>
 <section id="rest-of-japan" class="level2">
 <h2 class="anchored" data-anchor-id="rest-of-japan">Rest of Japan</h2>
 <p>We have illustrated how to resample and summarize data in one layer based on another in Aichi. Given the DEMs for the other prefectures, how could you compute these statistics for all of Japan?</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Download the merged or stitched layer</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>jp_dem <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="st">"inputs/jp_dem.tif"</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in land cover raster data</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>jp_lc <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">rast</span>(<span class="st">"inputs/JAXA_HRLULC_Japan_v23.12_250m.tif"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">crop</span>(jp_dem)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Resample elevation data to 250m to match land cover resolution</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>jp_dem_resampled <span class="ot">&lt;-</span> <span class="fu">resample</span>(<span class="at">x =</span> jp_dem, <span class="co">#to be resampled</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>                                <span class="at">y =</span> jp_lc, <span class="co">#resampled to</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>                                <span class="at">method =</span> <span class="st">"bilinear"</span>) </span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>jp_stats <span class="ot">&lt;-</span> <span class="fu">zonal</span>(<span class="at">x =</span> jp_dem_resampled, <span class="co">#the layer to ve calculated</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>                     <span class="at">z =</span> jp_lc, <span class="co">#the layer defining the zones</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>                     <span class="at">fun =</span> <span class="st">"mean"</span>, <span class="co">#calculate the mean</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>                     <span class="at">na.rm=</span><span class="cn">TRUE</span>, <span class="co">#ignore NAs</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>                     <span class="at">as.raster =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
 </section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
@@ -430,6 +450,9 @@ max values  : 50.97108,    360, 76.125 </code></pre>
 <li>Summarizing data in one layer based on categorical data in another layer</li>
 <li>Use terrain function to calculate slope and more from digital elevation model</li>
 </ul>
+<hr>
+<p>Workshop website and code available <a href="https://github.com/jbayham/ncu_workshop/tree/b9e580060a1fa2c546bbc87c7021caaaf851ea22/docs/workshop_03">here</a>.</p>
+<p><a href="https://jbayham.github.io/ncu_workshop/">Workshop Home Page</a></p>
 </section>
 
 </main>

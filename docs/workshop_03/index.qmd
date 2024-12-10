@@ -19,7 +19,7 @@ The objective of this workshop is to demonstrate how to process multiple raster 
 
 ### Digital Elevation Model (DEM)
 
-We will use a digital elevation model (DEM) based on imagery taken by the [Shuttle Radar Topography Mission (SRTM GL3) Global 90m](https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1) and accessed via the R package `elevatr` and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code [here](get_elevation.R). Please download the data I have posted here:
+We will use a digital elevation model (DEM) based on imagery taken by the [Shuttle Radar Topography Mission (SRTM GL3) Global 90m](https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1) and accessed via the R package `elevatr` and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code [here](https://github.com/jbayham/ncu_workshop/blob/b9e580060a1fa2c546bbc87c7021caaaf851ea22/docs/workshop_03/get_elevation.R). Please download the data I have posted here:
 
 -   [Japan DEM (by prefecture)](https://colostate-my.sharepoint.com/:f:/g/personal/jbayham_colostate_edu/EtmtFq2AehFPtO0cD0Dac3kBkL27Fk9EkDtf3AGUNuOoRw?e=fChpiy) (only need Aichi for the workshop)
 
@@ -32,10 +32,7 @@ We will use a digital elevation model (DEM) based on imagery taken by the [Shutt
 We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages on the computer you will be using:
 
 -   `sf`: simple features a package with many utilities for working with spatial vector data
--   `raster`: a package for working with raster data
 -   `terra`: another package for working with raster data
--   `exactextractr`: an optimized package for extracting and aggregating raster data to polygons
--   `tmap`: a package for creating interactive maps of vector and raster data
 
 *Note that you do not need to install packages if they are already installed - you only need to install packages once.*
 
@@ -72,7 +69,7 @@ The first several lines of your script should look something like this:
 #This is an introduction to working with spatial data in R
 
 library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
-pacman::p_load(tidyverse,sf,raster,terra,tmap)
+pacman::p_load(tidyverse,terra)
 
 setwd("your_path/workshop_03")
 
@@ -83,7 +80,7 @@ setwd("your_path/workshop_03")
 #| echo: false
 
 library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
-pacman::p_load(tidyverse,sf,raster,terra,tmap)
+pacman::p_load(tidyverse,terra)
 
 ```
 
@@ -117,6 +114,8 @@ plot(aichi_dem)
 #Plot land cover 
 plot(aichi_lc)
 ```
+
+`aichi_dem` has missing data places covered by water and urban areas. We can confirm this by counting the number of cells with missing values `sum(is.na(values(aichi_dem)))` and calculating the fraction of the raster covered by NAs `sum(is.na(values(aichi_dem)))/ncell(aichi_dem)`. 
 
 
 ### Step 2: Resampling
@@ -218,6 +217,30 @@ plot(hill, col=grey(0:100/100), legend=FALSE)
 
 We have illustrated how to resample and summarize data in one layer based on another in Aichi. Given the DEMs for the other prefectures, how could you compute these statistics for all of Japan? 
 
+```{r}
+#| code-fold: true
+#| eval: false
+
+
+#Download the merged or stitched layer
+jp_dem <- rast("inputs/jp_dem.tif")
+
+# Read in land cover raster data
+jp_lc <- terra::rast("inputs/JAXA_HRLULC_Japan_v23.12_250m.tif") %>%
+  crop(jp_dem)
+
+# Resample elevation data to 250m to match land cover resolution
+jp_dem_resampled <- resample(x = jp_dem, #to be resampled
+                                y = jp_lc, #resampled to
+                                method = "bilinear") 
+
+jp_stats <- zonal(x = jp_dem_resampled, #the layer to ve calculated
+                     z = jp_lc, #the layer defining the zones
+                     fun = "mean", #calculate the mean
+                     na.rm=TRUE, #ignore NAs
+                     as.raster = FALSE)
+```
+
 
 ## Summary
 
@@ -243,4 +266,8 @@ Workshop 03
 - Summarizing data in one layer based on categorical data in another layer
 - Use terrain function to calculate slope and more from digital elevation model
 
+----
 
+Workshop website and code available [here](https://github.com/jbayham/ncu_workshop/tree/b9e580060a1fa2c546bbc87c7021caaaf851ea22/docs/workshop_03).
+
+[Workshop Home Page](https://jbayham.github.io/ncu_workshop/)

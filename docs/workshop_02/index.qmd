@@ -403,4 +403,8 @@ This simple FE regression suggests that built up land is a complement and crop l
 
 This workshop demonstrated how to process both vector and spatial raster data to answer a question. We cropped a raster layer for easier processing. We extracted raster cell values inside of `sf` polygons of prefectures. We wrote a function to easily repeat the calculations.
 
+---
 
+Workshop website and code available [here](https://github.com/jbayham/ncu_workshop/tree/7acb323e36a6d62c809ffe606d467151de630000/docs/workshop_02).
+
+[Workshop Home Page](https://jbayham.github.io/ncu_workshop/)
