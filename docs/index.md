@@ -4,7 +4,7 @@
 
 The following links go to specific webpages for each of the four workshops
 
--   [Workshop 01](workshop_01/week01.html)
+-   [Workshop 01](workshop_01/index.html)
 
 -   [Workshop 02](workshop_02/index.html)
 

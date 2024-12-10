@@ -1,0 +1,394 @@
+---
+title: "Workshop 01: Introduction to Geospatial Data"
+author: "Jude Bayham"
+format: 
+  html:
+    theme: zephyr
+    toc: true
+---
+
+![](banner.png){width="100%"}
+
+The objective of this workshop is to introduce you to geospatial data. You will acquire, assemble, process, and map spatial data.
+
+## Prerequisites
+
+### Reading
+
+There are many sources and references available online to help you learn to work with spatial data in R. Taro Mieno is an economist at University of Nebraska-Lincoln and he has written an online book, [R as GIS for Economists](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/), to help economists learn to use R for GIS: . Please read [Chapter 2 Vector Data Handling with sf](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/chapters/02-VectorDataBasics.html) in preparation for the workshop. The reading covers some of the basics of vector type spatial data that we will learn. Being familiar with these concepts will allow you to understand the workshop better and ask more in-depth questions during the workshop.
+
+You may also find [Geocomputation with R](https://r.geocompx.org/) by Lovelace et al. a helpful resource. It is written for a broader audience, but provides more detail than *R as GIS for Economists*.
+
+### Statistics Japan API
+
+We will access data from <https://www.e-stat.go.jp/> using their application programming interface (API). You will need to register for an API key in order to use the API. These were the instructions and link names in English. I will update these with instructions in Japanese.
+
+1.  Follow the links to create an account.
+
+2.  Click the link to "My Page".
+
+3.  Click the link to "API function (application ID issuance)"
+
+4.  Complete the fields name (a name for your application: Rscript) and URL (http://test.localhost/)
+
+5.  Click "issue" to the right
+
+6.  The appID field should now contain a long string of numbers and letters. This is the key associated with your account. You will use this to query data through the API.
+
+7.  Set appID as an environmental variable by typing the following code in R: `usethis::edit_r_environ()`. This command uses the function `edit_r_environ()` from the package called `usethis`. If you have not installed the package, first type `install.packages("usethis")` to install the package. Then, add a line `STATISTICS_JAPAN_API_KEY = "your_key_here"`. And save the file. Restart the R kernel.
+
+### RStudio
+
+We will be working with packages designed to process and visualize geospatial data. You can install a package by typing the following into the console: `install.packages("package_name")`. *Note the quotations*. Please install the following packages on the computer you will be using:
+
+-   `sf`: simple features a package with many utilities for working with spatial vector data
+-   `raster`: a package for working with raster data
+-   `tmap`: a package for creating interactive maps of vector and raster data
+-   `ggplot`: a package for plotting data (included in tidyverse)
+
+*Note that you do not need to install packages if they are already installed - you only need to install packages once.*
+
+## Geospatial Data Overview
+
+-   **Definition**: Geospatial data is data that includes location information, meaning it includes data linked to locations on the Earth's surface. Geospatial data is usually represented as coordinates (latitude, longitude) or as addresses, regions, or other geographic identifiers.
+
+-   **Types of Geospatial Data**:
+
+    -   **Vector data**: Represents geographic features using points, lines, and polygons (e.g., locations of stores, roads, or regions).
+    -   **Raster data**: Represents data in a grid format, typically used for continuous variables (e.g., elevation, temperature, satellite imagery).
+
+-   **Coordinate Reference Systems (CRS)**: Defines how spatial data is mapped onto the Earth's surface. It's crucial to understand CRS when working with multiple datasets to ensure they align correctly (e.g., WGS 84, UTM).
+
+-   **Projections**: Geospatial data must be projected to represent the 3D Earth on a 2D surface. Different projections minimize different types of distortions (e.g., area, shape, distance).
+
+-   **Geospatial Packages in R**:
+
+    -   **sf**: Simple Features for R, a package for working with vector data.
+    -   **raster**: A package for working with raster data.
+    -   **sp**: An older package that also handles spatial data but is being gradually replaced by `sf`.
+
+-   **Common Tasks**:
+
+    -   Loading and visualizing geospatial data.
+    -   Transforming data to different CRS.
+    -   Performing spatial operations like intersections, unions, and buffers.
+    -   Creating maps and conducting spatial analysis (e.g., proximity analysis, clustering).
+
+-   **File Formats**:
+
+    -   **Shapefiles**: A common vector data format that consists of multiple files.
+    -   **GeoTIFF**: A common raster data format.
+    -   **GeoJSON**: A lightweight format for sharing geospatial data online.
+
+## Getting started
+
+Let's get some data and read it into R. The Geospatial Information Authority of Japan provides downloadable maps of the country: <https://www.gsi.go.jp/kankyochiri/gm_japan_e.html>. Download the *Global Map Japan version 2.2 Vector data (Released in 2016)* by clicking on the linked file: `gm-jpn-all_u_2_2.zip` (9.2MB). This is a zipped file containing many files. **Note where you download the file**.
+
+Before opening Rstudio and working with the data, you should organize your digital workspace.
+
+1.  Create a directory for this workshop titled: `workshop_01`. If you already have a directory for this class/seminar, create the directory under the class directory.
+
+2.  Create a directory titled `inputs` under `workshop_01`. The path should be `workshop_01/inputs`.
+
+3.  Copy or move the directory created by unzipping `gm-jpn-all_u_2_2.zip` into `workshop_01/inputs`.
+
+Open up Rstudio and do the following:
+
+1.  Open a new script.
+
+2.  Write a comment with a brief description about what the script does. In most cases, you know the intention of the script. Since this is a workshop, type `#This is an introduction to working with spatial data in R`
+
+3.  Load the package `pacman` and use `p_load()` to install and load the packages we will be using in this workshop.
+
+4.  Navigate to `workshop_01` (the directory you just created for the project). You can use the dropdown menu Session \> Set Working Directory \> Choose Directory or type the `setwd("path_here")` command at the top of your script. If you use the dropdown menu, R will generate the `setwd()` command and display it in the console. Copy and paste it into your script.
+
+5.  Save your script and title the file: `workshop_01.R`
+
+The first several lines of your script should look something like this:
+
+```{r}
+#| eval: false
+#This is an introduction to working with spatial data in R
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,tmap)
+
+setwd("your_path/workshop_01")
+
+######################
+```
+
+### Reading spatial data
+
+Now we are ready to read in our spatial data. We will start with vector spatial data (see <https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/chapters/02-VectorDataBasics.html> for details on vector data). Read in the data using the following command:
+
+```{r}
+#| echo: false
+
+library(pacman) #if you have never used this package, you need to install it: install.packages("pacman)
+pacman::p_load(tidyverse,sf,tmap,estatapi)
+
+```
+
+```{r}
+#Read in Japan political boundaries
+jp_boundaries <- st_read("inputs/gm-jpn-all_u_2_2/polbnda_jpn.shp")
+
+```
+
+Note that the directory `gm-jpn-all_u_2_2` was created by default when unzipping the downloaded file. If successful, R prints out information in the console. First, the data format is ESRI Shapefile, which is one of many formats for storing spatial data. The `sf` package read the data in and created a simple feature collection with 2914 rows (features) and 9 columns (fields, variables or attributes). The features are polygons, which are enclosed multi-sided shapes defined by a series of points with lines connecting them. We can ignore the dimensions and bounding box for now. The Geodetic CRS is ITRF94 (<https://epsg.io/4916>), which defines the coordinate reference system. This is information that tells `sf` how to interpret the location information (coordinates). More on the CRS and projection shortly.
+
+Let's view the data on a map using the package `tmap`. The purpose of this map is to briefly inspect the data and make sure that it looks like what we expect - in this case, political boundaries of Japan. We will spend more time learning how to create maps later.
+
+```{r}
+#Create a quick interactive map
+jp_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
+  tm_shape(jp_boundaries) +
+  tm_polygons(alpha = .1,col="red") #define red and semi-transparent fill color
+  
+#Display as interactive leaflet
+tmap_leaflet(jp_map)
+```
+
+The layer `jp_boundaries` aligns with the basemap, lending some confidence that the boundaries data was read in correctly.
+
+### Projections
+
+Let's briefly digress to go over the [coordinate reference system (CRS)](https://r.geocompx.org/spatial-class#crs-intro). The CRS combines a coordinate system with a datum. A coordinate system can be geographic (latitude and longitude on a spherical model of the Earth) or projected (coordinates transformed onto a flat surface, like x and y). A datum is a mathematical model of the Earth that defines the position of the origin, scale, and orientation of the coordinate system. Spatial data need a CRS to plot them on a map.
+
+In the case of `jp_boundaries`, the CRS is defined in the .shp file that we read into R. In cases where the CRS is not defined, which may happen when you read in coordinates from a text file or non-spatial format, you may need to assign and transform the projection.
+
+Here is a quick example. Run each line individually and inspect the object at each step.
+
+```{r}
+#Define a point in a dataframe - lat is like the y coord and lon is like the x
+ncu <- data.frame(lat=35.138496, lon=136.925901)
+
+#Convert the dataframe into a spatial object using st_as_sf() - it is important that lon is first (x,y)
+ncu_geo <- st_as_sf(ncu,coords = c("lon","lat"))
+print (ncu_geo)
+
+#Plot the point like we did above
+ncu_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
+  tm_shape(ncu_geo) + 
+  tm_symbols(col="red")
+
+#tmap_leaflet(ncu_map)
+```
+
+You will notice that the object `ncu_geo` is a simple feature but does not have a CRS defined. When you plot the object, `tmap` provides a warning that there is no projection defined, so it guesses and is correct in this case. When you define the sf object, you can define a CRS by adding `crs=` to the function `st_as_sf()`. I often use the epsg code 4326 for latitude and longitude coordinates because it is [WGS84](https://epsg.io/4326). The line should read: `ncu_geo <- st_as_sf(ncu,coords = c("lon","lat"),crs=4326)`.
+
+You can also transform from one projection to another using the function `st_transform()`. When performing distance-based operations on spatial data, you may need to transform data into a metered projection. Let's reproject `ncu_geo` to EPSG [2448](https://epsg.io/2448), which is centered just south of Japan, making it accurate for distance calculations in Central Japan. Now that `ncu_geo` is in a metered projection, we can buffer the point with a 1 km buffer and plot it. We will do more buffering to process data in later workshops.
+
+```{r}
+#| echo: false
+
+ncu_geo <- st_as_sf(ncu,coords = c("lon","lat"),crs=4326)
+
+```
+
+
+```{r}
+#Transform the point to epsg 2448 
+ncu_geo <- ncu_geo %>%
+  st_transform(2448)
+print(ncu_geo)
+
+#Buffer the point creating a circle with 1km radius around the point
+ncu_buffered <- ncu_geo %>%
+  st_buffer(dist=1000) #the buffer radius is always in the units of the projection - meters in this case
+
+#Plot the point and buffer
+ncu_map <- tm_basemap("CartoDB.Positron") + #start with a basemap
+  tm_shape(ncu_geo) + 
+  tm_symbols(col="red",size = .001)  +
+  tm_shape(ncu_buffered) +
+  tm_borders(col="darkred")
+
+tmap_leaflet(ncu_map)
+```
+
+## Statistics Japan
+
+We have a base layer of administrative areas in Japan. Let's join data from Statistics Japan to visualize workforce data. First, we need to download data from Statistics Japan. We will use the API to access the data programatically. **See the section [Statistics Japan API] if you have not already registered for an API key.** 
+
+We are going to download data from the Employment Status Survey 2022, <https://www.e-stat.go.jp/index.php/en/dbview?sid=0004008528>. The table contains a large volume of employment information. One of the survey questions asks respondents whether they are interested in switching jobs ("Wishing to switch to another job (engaged in work (engaged in work who had a previous job))" indicated by cdCat04="13"). We will query the number of people in each spatial unit interested in switching jobs. `cdCat**` are a series of other query parameters filtering for total number of all ages and sexes. You may remove the filters to download more data.
+
+
+```{r}
+#Call API Key from environmental variables - usethis::edit_r_environ() to set the environmental variables
+api_key=Sys.getenv("STATISTICS_JAPAN_API_KEY")
+
+#Query all tables available
+#stat_tab <- estat_getStatsList(appId = api_key, lang = "E", searchWord = "business conditions")
+
+#Get data from table 0004008528. The arguments cdCat** subset the entire table based on some criteria
+estat_query <- estat_getStatsData(
+  appId = api_key,
+  lang = "E",
+  statsDataId = "0004008528",
+  cdCat01 = "0",
+  cdCat02 = "0",
+  cdCat03 = "0",
+  cdCat04 = "13"
+  #cdCat01 = c("002")
+)
+
+glimpse(estat_query)
+```
+
+Inspect the object using `glimpse(estat_query)`. The first row indicates that 849,900 people are interested in switching jobs. Can you find this number on the table displayed on the [webpage](https://www.e-stat.go.jp/index.php/en/dbview?sid=0004008528)? 
+
+Now that we understand the data we obtained, we can remove extraneous information from the dataframe. Use select to keep the following variables only: `area_code, Area classification, value`
+
+```{r}
+labor_dat <- estat_query %>%
+  select(area_code,desc=`Area classification`,value) #select three columns and rename the second one in the process
+```
+
+### Joining data to create spatial data object
+
+Now we are ready to join `labor_dat` (people interested in another job) with the administrative boundaries spatial object, `jp_boundaries`. We use the function `inner_join()` from the `dplyr` package. When joining spatial and non-spatial data, the first argument determines the type. Try changing the order and query the class of the object. The `by=` argument tells the function what variables from the two datasets contain the same information and can be used to join them. Note that the variable names do not need to be the same, but the order matters - the first variable name is from `x` and the second is from `y`.  
+
+```{r}
+jp_labor <- inner_join(x=jp_boundaries,y=labor_dat,by=c("adm_code"="area_code")) 
+
+class(jp_labor)
+
+inner_join(labor_dat,jp_boundaries,by=c("area_code"="adm_code")) %>%
+  class()
+```
+
+## Creating a map
+
+`jp_labor` contains the data that we want to plot and the spatial information about the locations for which we have data. We will create a map of Japan using color to indicate where people are interested in changing jobs. 
+
+```{r}
+# Create map using qtm (quick thematic map)
+qtm(jp_labor,fill="value")
+```
+
+While this technically worked, the map is not very informative or visually appealing. The labor data we joined with our map contained data a three levels: national, prefecture, and city (shi). The `jb_boundaries` layer contains the cities (highest resolution). Mapping the prefecture data may provide more information about labor force in different regions across the country. 
+
+### Spatial Aggregation
+
+We need a map layer of the prefectures. We could go find one or aggregate the data layer we already have. We can aggregate elements in `sf` objects by using the `group_by() %>% summarize()` workflow in `dplyr`. Let's create a prefecture layer by aggregating the cities (Shi) up to prefectures (Ken):
+
+```{r}
+#Create prefecture layer by aggregating 
+pref <- jp_boundaries %>%
+  filter(pop>0) %>% #keep only areas with people in them
+  group_by(nam) %>% #the column "nam" contains the prefecture name
+  summarize(pop=sum(pop,na.rm=TRUE), #adding population 
+            adm_code=first(adm_code)) %>% #keeping the first admin code for each area
+  mutate(adm_code=paste0(str_sub(adm_code,1,2),"000")) #replacing the last three digits of the admin code with "000" to enable join with labor data
+```
+
+> Can you plot the new layer to confirm the aggregation worked?
+
+We will use this prefecture level data in the next workshop, so let's save `pref`.
+
+```{r}
+#Save pref in geopackage format
+st_write(obj = pref,
+         dsn = "japan_prefectures.gpkg",
+         delete_layer = TRUE)
+```
+
+
+Now we need to rejoin the labor data with this new prefecture boundary data.
+
+```{r}
+#Join sf layer with data
+pref_labor <- inner_join(pref,labor_dat,by=c("adm_code"="area_code"))
+
+#Quick plot of the new layer
+qtm(pref_labor,fill="value")
+```
+
+
+### Refining the map
+
+Let's zoom in to the most populated areas and omit the far away archipelagos by defining a bounding box. There are several online mapping tools that you can use to help find a bounding box that you like (e.g., https://boundingbox.klokantech.com/).
+
+```{r}
+#Define bounding box
+bb <- st_bbox(c(xmin = 129.359609159, xmax = 145.544702085, ymin = 31.0122666666, ymax = 45.5707366225), #named vector of coordinates - x ~ lon and y ~ lat
+              crs = st_crs(4326)) #define the crs so R knows how to interpret the coordinates
+
+```
+
+We will use the more specific functions in `tmap` to build up the layers of the map. 
+
+```{r}
+pref_labor_map <- tm_shape(pref_labor,bbox = bb) +
+  tm_fill(col = "value") + #use the attribute named value to determine the fill color
+  tm_borders(col = "lightgray") + #make the borders a light gray
+  tm_layout(bg.color = "#D1EAF0") #Define a background color and legend position
+
+pref_labor_map
+```
+
+You might notice that the map simply shows which prefectures have the largest populations because we are plotting the number of people open to new jobs. We should normalize this count. Ideally, we would find the number of workers in each prefecture. For simplicity, we will use the population that we have in the data already.
+
+```{r}
+pref_labor_norm <- pref_labor %>%
+  mutate(value_norm = value/pop)
+```
+
+Then recreate the map with the new layer.
+
+```{r}
+pref_labor_map <- tm_shape(pref_labor_norm,bbox = bb) +
+  tm_fill(col = "value_norm") + #use the attribute named value to determine the fill color
+  tm_borders(col = "lightgray") + #make the borders a light gray
+  tm_layout(bg.color = "#D1EAF0") #Define a background color and legend position
+
+pref_labor_map
+```
+
+The pattern changed a bit but the highest percentages still seem to be around Tokyo. Let's fix the legend to reflect the units of the map and add a scale and compass. 
+
+- First, we can add the `title` argument to `tm_fill()` to change the legend title. Then, we can add a function to the `legend.format` argument to change the display of the numbers in the legend to percent. 
+
+- We use `tm_compass()` to add a compass. I personally like the four point star, but you can choose what you like.
+
+- We use `tm_scale_bar()` to add a scale bar. See the documentation for more customization options.
+
+```{r}
+pref_labor_map <- tm_shape(pref_labor_norm,bbox = bb) +
+  tm_fill(col = "value_norm",   #use the attribute named value to determine the fill color
+          title = "New Job Interest", #change title to legend
+          legend.format = list(fun=function(x){paste0(x*100,"%")})) +  #use function to make numbers percents
+  tm_borders(col = "lightgray") + #make the borders a light gray
+  tm_compass(type = "4star") +
+  tm_scale_bar() +
+  tm_layout(bg.color = "#D1EAF0") #Define a background color and legend position
+
+pref_labor_map
+```
+
+A very nice feature of tmap is that you can generate an interactive map that can be easily embedded in a website with very little additional code.
+
+```{r}
+tmap_leaflet(pref_labor_map)
+```
+
+
+## Summary
+
+The following is a list of topics covered today:
+
+- Reading in external geospatial data using `st_read()`
+- Downloading data from Statistics Japan API
+- Coordinate Reference System and reprojecting data
+- Joining spatial and non-spatial data
+- Mapping with `tmap()` and customizing
+
+The best way to learn to write code is to practice and experiment with the code. A simple extension would be to get other data from the Statistics Japan API and create a map following the steps in this tutorial.
+
+---
+
+Workshop website and code available [here](https://github.com/jbayham/ncu_workshop/tree/b9e580060a1fa2c546bbc87c7021caaaf851ea22/docs/workshop_01).
+
+[Workshop Home Page](https://jbayham.github.io/ncu_workshop/)
