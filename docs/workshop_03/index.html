@@ -83,7 +83,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link active" data-scroll-target="#prerequisites">Prerequisites</a>
   <ul class="collapse">
   <li><a href="#reading" id="toc-reading" class="nav-link" data-scroll-target="#reading">Reading</a></li>
-  <li><a href="#dem" id="toc-dem" class="nav-link" data-scroll-target="#dem">DEM</a></li>
+  <li><a href="#digital-elevation-model-dem" id="toc-digital-elevation-model-dem" class="nav-link" data-scroll-target="#digital-elevation-model-dem">Digital Elevation Model (DEM)</a></li>
   <li><a href="#rstudio" id="toc-rstudio" class="nav-link" data-scroll-target="#rstudio">RStudio</a></li>
   </ul></li>
   <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started">Getting started</a></li>
@@ -132,12 +132,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="reading">Reading</h3>
 <p><a href="https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/">R as GIS for Economists</a> remains a useful reference.</p>
 </section>
-<section id="dem" class="level3">
-<h3 class="anchored" data-anchor-id="dem">DEM</h3>
+<section id="digital-elevation-model-dem" class="level3">
+<h3 class="anchored" data-anchor-id="digital-elevation-model-dem">Digital Elevation Model (DEM)</h3>
 <p>We will use a digital elevation model (DEM) based on imagery taken by the <a href="https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1">Shuttle Radar Topography Mission (SRTM GL3) Global 90m</a> and accessed via the R package <code>elevatr</code> and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code <a href="get_elevation.R">here</a>. Please download the data I have posted here:</p>
 <ul>
-<li><p><a href="">Japan DEM (by prefecture)</a></p></li>
-<li><p><a href="">Japan DEM (merged)</a></p></li>
+<li><p><a href="https://colostate-my.sharepoint.com/:f:/g/personal/jbayham_colostate_edu/EtmtFq2AehFPtO0cD0Dac3kBkL27Fk9EkDtf3AGUNuOoRw?e=fChpiy">Japan DEM (by prefecture)</a> (only need Aichi for the workshop)</p></li>
+<li><p><a href="https://colostate-my.sharepoint.com/:i:/r/personal/jbayham_colostate_edu/Documents/data_storage/_share/ncu_workshop/jp_dem.tif?csf=1&amp;web=1&amp;e=yNvagt">Japan DEM (merged)</a> (Optional)</p></li>
 </ul>
 </section>
 <section id="rstudio" class="level3">
@@ -159,7 +159,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ol type="1">
 <li><p>Create a directory for this workshop titled: <code>workshop_03</code>. If you already have a directory for this class/seminar, create the directory under the class directory.</p></li>
 <li><p>Create a directory titled <code>inputs</code> under <code>workshop_03</code>. The path should be <code>workshop_03/inputs</code>.</p></li>
-<li><p>Download and move the <a href="#dem">DEM</a> files into <code>workshop_03/inputs</code>.</p></li>
+<li><p>Download and move the [DEM] files into <code>workshop_03/inputs</code>.</p></li>
 <li><p>We will also continue using the land cover data from workshop 02. Copy the file JAXA_HRLULC_Japan_v23.12_250m.tif (2022) into <code>workshop_03/inputs</code>.</p></li>
 </ol>
 <!-- We are also going to use the Japan political boundaries file from last week. Locate that file and copy it into `workshop_02/inputs`. -->

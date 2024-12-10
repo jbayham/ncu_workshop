@@ -17,13 +17,13 @@ The objective of this workshop is to demonstrate how to process multiple raster 
 
 [R as GIS for Economists](https://tmieno2.github.io/R-as-GIS-for-Economists-Quarto/) remains a useful reference.
 
-### DEM
+### Digital Elevation Model (DEM)
 
 We will use a digital elevation model (DEM) based on imagery taken by the [Shuttle Radar Topography Mission (SRTM GL3) Global 90m](https://portal.opentopography.org/raster?opentopoID=OTSRTM.042013.4326.1) and accessed via the R package `elevatr` and OpenTopography API. Note that the data is also available in 30 meter resolution. DEMs are useful in environmental research and are the basis for other topographic calculations. OpenTopography API requires researchers to register for an API key. You may register and run the code [here](get_elevation.R). Please download the data I have posted here:
 
--   [Japan DEM (by prefecture)]()
+-   [Japan DEM (by prefecture)](https://colostate-my.sharepoint.com/:f:/g/personal/jbayham_colostate_edu/EtmtFq2AehFPtO0cD0Dac3kBkL27Fk9EkDtf3AGUNuOoRw?e=fChpiy) (only need Aichi for the workshop)
 
--   [Japan DEM (merged)]()
+-   [Japan DEM (merged)](https://colostate-my.sharepoint.com/:i:/r/personal/jbayham_colostate_edu/Documents/data_storage/_share/ncu_workshop/jp_dem.tif?csf=1&web=1&e=yNvagt) (Optional)
 
 
 
